@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="29.2.6">
   <diagram name="ER_Diagram" id="0">
-    <mxGraphModel dx="1018" dy="689" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="959" dy="689" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -82,7 +82,7 @@
             <mxPoint x="1221" y="829.5" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="7QiZz2TyOijHsy6IWYnW-21" connectable="0" parent="VmJAwnhsoO-yE_ZFEKMs-25" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="potrebbe essere utile per la questione dati/domini?" vertex="1">
+        <mxCell id="7QiZz2TyOijHsy6IWYnW-21" connectable="0" parent="VmJAwnhsoO-yE_ZFEKMs-25" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="potrebbe essere utile per la questione clienti-rapporti-dati-domini?" vertex="1">
           <mxGeometry relative="1" x="-0.0011" y="3" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
@@ -107,6 +107,9 @@
         </mxCell>
         <mxCell id="7QiZz2TyOijHsy6IWYnW-20" edge="1" parent="1" source="13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.448;entryY=1.013;entryDx=0;entryDy=0;entryPerimeter=0;" target="6">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dYAmCi8jlqsICUoziRiw-20" parent="1" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.cloud_callout" value="le configurazioni variano in base alla chiave (banca-provenienza-tabella)" vertex="1">
+          <mxGeometry height="140" width="165" x="1090" y="199" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
