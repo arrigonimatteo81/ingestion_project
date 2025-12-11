@@ -7,3 +7,5 @@ CREATE TABLE public.tab_task_sources (
 	CONSTRAINT chk_source_type CHECK (((source_type)::text = ANY ((ARRAY['jdbc'::character varying, 'bigquery'::character varying, 'file'::character varying, 'JDBC'::character varying, 'BIGQUERY'::character varying, 'FILE'::character varying])::text[]))),
 	CONSTRAINT tab_task_sources_pk PRIMARY KEY (id)
 );
+
+ALTER TABLE public.tab_task_sources ADD CONSTRAINT fk_tab_task_sources FOREIGN KEY (source_id) REFERENCES public.tab_tasks(source_id) ON DELETE CASCADE ON UPDATE CASCADE;
