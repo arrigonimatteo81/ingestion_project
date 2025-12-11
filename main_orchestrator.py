@@ -1,24 +1,39 @@
 from pyspark.sql import SparkSession
+import getopt
+import sys
+from common.utils import get_logger, download_from_gcs
 from metadata.loader.metadata_loader import MetadataLoader
 from ingestion.orchestrator import IngestionOrchestrator
 
-spark = SparkSession.builder.appName("UniversalIngestion").getOrCreate()
+logger = get_logger(__name__)
 
-meta_db_conn = {
-    "host": "localhost",
-    "port": 5432,
-    "user": "meta_user",
-    "password": "meta_pwd",
-    "dbname": "metadata_db"
-}
+if __name__ == "__main__":
 
-loader = MetadataLoader(meta_db_conn)
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:], "r:g:c:", ["run_id=", "groups=", "config_file="]
+        )
 
-connections = loader.load_connections()
-sources = loader.load_sources()
-destinations = loader.load_destinations()
+        run_id = None
+        groups = []  # Initialize groups as an empty list
+        config_file = None
 
-orchestrator = IngestionOrchestrator(spark, connections, destinations)
+        for opt, arg in opts:
+            if opt in ("-r", "--run_id"):
+                run_id = arg
+            elif opt in ("-g", "--groups"):
+                groups = arg.split(",")  # Split the CSV string into a list
+            elif opt in ("-c", "--config_file"):
+                config_file = arg
 
-for src_cfg in sources:
-    orchestrator.run_pipeline(src_cfg)
+        print(
+            f"Starting main_orchestrator with run_id: {run_id}, groups: {groups}, config_file: {config_file}"
+        )
+
+        if config_file.lower().startswith("gs:"):
+            logger.info(f"Download {config_file} from gcs...")
+            download_from_gcs(config_file)
+        else:
+            logger.warn(
+                f"Skipping download json from gcs since {config_file} doesn't start with gcs"
+            )
