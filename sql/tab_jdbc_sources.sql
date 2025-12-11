@@ -1,8 +1,4 @@
--- public.task_transformations_jdbc_source definition
-
--- Drop table
-
--- DROP TABLE public.task_transformations_jdbc_source;
+drop table if exists public.tab_jdbc_sources;
 
 CREATE TABLE public.tab_jdbc_sources (
 	source_id varchar NOT NULL,
@@ -19,7 +15,4 @@ CREATE TABLE public.tab_jdbc_sources (
 	CONSTRAINT tab_jdbc_sources_pk PRIMARY KEY (source_id)
 );
 
-
--- public.task_transformations_jdbc_source foreign keys
-
---ALTER TABLE public.task_transformations_jdbc_source ADD CONSTRAINT task_trans_jdbc_source_task_transformations_sources_fk FOREIGN KEY (source_id,transformation_id) REFERENCES public.task_transformations_sources(id,transformation_id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE public.tab_jdbc_sources ADD CONSTRAINT fk_tab_jdbc_sources FOREIGN KEY (source_id) REFERENCES public.tab_task_sources(source_id) ON DELETE CASCADE ON UPDATE CASCADE;

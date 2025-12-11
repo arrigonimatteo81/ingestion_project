@@ -1,0 +1,9 @@
+drop table if exists public.tab_task_sources;
+
+CREATE TABLE public.tab_task_sources (
+	id varchar NOT NULL,
+    source_id varchar NOT null UNIQUE,
+	source_type varchar NOT NULL,
+	CONSTRAINT chk_source_type CHECK (((source_type)::text = ANY ((ARRAY['jdbc'::character varying, 'bigquery'::character varying, 'file'::character varying, 'JDBC'::character varying, 'BIGQUERY'::character varying, 'FILE'::character varying])::text[]))),
+	CONSTRAINT tab_task_sources_pk PRIMARY KEY (id)
+);
