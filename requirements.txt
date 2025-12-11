@@ -1,4 +1,7 @@
 pyspark
-psycopg2[binary]
+psycopg[binary]
 pandas
+google
+google-cloud-dataproc
 google-cloud-bigquery
+google-cloud-storage

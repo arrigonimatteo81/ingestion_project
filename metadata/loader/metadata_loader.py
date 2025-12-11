@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg
 import json
 from metadata.models.tab_conn import TabConn
 from metadata.models.tab_dest import TabDest
@@ -8,7 +8,7 @@ from metadata.models.tab_src import TabSrc
 class MetadataLoader:
 
     def __init__(self, meta_db_conn):
-        self.conn = psycopg2.connect(**meta_db_conn)
+        self.conn = psycopg.connect(**meta_db_conn)
 
     def load_connections(self):
         cur = self.conn.cursor()
