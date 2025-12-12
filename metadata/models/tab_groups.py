@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class TabGroups:
+class Group:
     task_id: str
     group_name: str
     def __str__(self):

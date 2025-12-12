@@ -17,7 +17,6 @@ class TestOrchestrator(unittest.TestCase):
             config_file=TEST_CONFIG_FILE,
             repository=TEST_REPOSITORY,
         )
-        print(self.orchestrator)
 
     def test_fetch_unique_tasks_in_group(self):
         groups = ["GRP_REPORT1", "GRP_REPORT2"]

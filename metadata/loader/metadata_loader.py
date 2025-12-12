@@ -1,8 +1,9 @@
 import psycopg2
 
 from common.utils import get_logger
-from metadata.models.tab_config import TabConfig
-from metadata.models.tab_groups import TabGroups
+from metadata.models.tab_config import Config
+from metadata.models.tab_groups import Group
+from metadata.models.tab_tasks import Task, TaskType
 
 logger = get_logger(__name__)
 
@@ -14,33 +15,44 @@ class MetadataLoader:
 
 class CommonMetadata(MetadataLoader):
 
-    def get(self, config_name) -> TabConfig:
+    def get(self, config_name) -> Config:
         cur = self.conn.cursor()
-        cur.execute(f"SELECT config_name, config_value FROM public.tab_configurations where config_name={config_name}")
+        cur.execute(f"SELECT config_name, config_value FROM public.tab_configurations where config_name='{config_name}'")
         row = cur.fetchone()
-        return TabConfig(*row[:-1])
+        return Config(*row[:-1])
 
-    def get_all(self) -> [TabConfig]:
+    def get_all(self) -> [Config]:
         cur = self.conn.cursor()
         cur.execute(f"SELECT config_name, config_value FROM public.tab_configurations")
         rows = cur.fetchall()
         result = []
         for r in rows:
-            result.append(TabConfig(*r[:-1]))
+            result.append(Config(*r[:-1]))
         return result
 
 class OrchestratorMetadata(CommonMetadata):
 
-    def get_all_tasks_in_group(self, groups: [str]) -> [TabGroups]:
+    def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
         cur = self.conn.cursor()
         str_group = "',".join(groups)
         cur.execute(f"SELECT * FROM public.task_group where group_name in ('{str_group}')")
         rows = cur.fetchall()
         result = []
         for r in rows:
-            result.append(TabGroups(*r[:-1]))
-
+            result.append(Group(*r[:-1]))
         return result
+
+    def get_task(self,task_id):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT * FROM public.tab_tasks where id ='{task_id}'")
+        row = cur.fetchone()
+        return Task(*row[:-1])
+
+    def get_task_configuration(self,task_config_profile: str):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT * FROM public.tab_tasks_config where name ='{task_config_profile}'")
+        row = cur.fetchone()
+        return TaskType(*row[:-1])
 
 
 

@@ -1,6 +1,8 @@
 from pyspark.sql import SparkSession
 import getopt
 import sys
+
+from common.result import OperationResult
 from common.utils import get_logger, download_from_gcs
 from metadata.loader.metadata_loader import MetadataLoader
 from ingestion.orchestrator import IngestionOrchestrator
@@ -40,6 +42,18 @@ if __name__ == "__main__":
             )
 
         orchestrator:OrchestratorManager = OrchestratorManager(run_id=run_id, config_file=config_file, groups=groups)
+
+        orchestrator_result: OperationResult = orchestrator.start()
+
+        if orchestrator_result.successful:
+            logger.info("Orchestrator completed successfully")
+            sys.exit(0)
+        else:
+            logger.error(
+                f"Orchestrator completed with errors: {orchestrator_result.description}"
+            )
+            sys.exit(1)
+
 
     except getopt.GetoptError as ex:
         logger.error(ex, exc_info=True)

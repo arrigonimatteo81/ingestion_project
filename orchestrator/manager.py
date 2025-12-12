@@ -1,3 +1,4 @@
+from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
 from metadata.loader.metadata_loader import OrchestratorMetadata
@@ -28,7 +29,7 @@ class OrchestratorManager:
     def start(self) -> OperationResult:
         logger.info("Running orchestrator manager")
         logger.info(
-            "Fetching tasks and tasks_dag in groups " + ", ".join(self._groups) + "..."
+            "Fetching tasks in groups " + ", ".join(self._groups) + "..."
         )
         tasks: set[str] = self._fetch_tasks_ids_in_groups(self._groups)
         if len(tasks) == 0:
@@ -37,6 +38,9 @@ class OrchestratorManager:
             return OperationResult(successful=False, description=err_mex)
         else:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
+            todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks)
+            for i in todo_list:
+                print(f"{i}")
             return OperationResult(successful=True, description="Tutto ok")
 
 
