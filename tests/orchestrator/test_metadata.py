@@ -1,4 +1,5 @@
-from metadata.loader.metadata_loader import OrchestratorMetadata, TabGroups
+from metadata.loader.metadata_loader import OrchestratorMetadata
+from metadata.models.tab_groups import TabGroups
 
 
 class TestOrchestratorMetadata(OrchestratorMetadata):

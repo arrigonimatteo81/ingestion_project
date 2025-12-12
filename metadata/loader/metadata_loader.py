@@ -1,28 +1,11 @@
-from dataclasses import dataclass
-
 import psycopg2
-import json
 
 from common.utils import get_logger
-from metadata.models.tab_conn import TabConn
-from metadata.models.tab_dest import TabDest
-from metadata.models.tab_src import TabSrc
+from metadata.models.tab_config import TabConfig
+from metadata.models.tab_groups import TabGroups
 
 logger = get_logger(__name__)
 
-@dataclass
-class TabConfig:
-    config_name: str
-    config_value: str
-    def __str__(self):
-        return f"TabConfig(config_name={self.config_name},config_value={self.config_name})"
-
-@dataclass
-class TabGroups:
-    task_id: str
-    group_name: str
-    def __str__(self):
-        return f"TabGroups(task_id={self.task_id},group_name={self.group_name})"
 
 class MetadataLoader:
 
@@ -31,7 +14,7 @@ class MetadataLoader:
 
 class CommonMetadata(MetadataLoader):
 
-    def get(self, config_name):
+    def get(self, config_name) -> TabConfig:
         cur = self.conn.cursor()
         cur.execute(f"SELECT config_name, config_value FROM public.tab_configurations where config_name={config_name}")
         row = cur.fetchone()
