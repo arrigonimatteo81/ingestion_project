@@ -148,3 +148,48 @@ def get_logger(name: str, application_conf_name: str = "application.conf"):
             format=log_format, level=DEFAULT_LOG_LEVEL, datefmt=date_format
         )
     return logger
+
+def print_json(my_dict):
+    if not isinstance(my_dict, dict):
+        raise TypeError("Input must be a dictionary")
+    import json
+
+    print(json.dumps(my_dict, indent=2, ensure_ascii=False))
+
+
+def dict_to_string(dict_to_convert):
+    """
+    Convert a dictionary to a JSON string.
+
+    Args:
+        dict_to_convert (dict): The dictionary to convert
+
+    Returns:
+        str: JSON string representation of the dictionary
+    """
+    try:
+        if not isinstance(dict_to_convert, dict):
+            raise ValueError("Input must be a dictionary")
+        return json.dumps(dict_to_convert)
+    except Exception as e:
+        raise Exception(f"Error converting dictionary to string: {str(e)}")
+
+
+def string_to_dict(str_to_convert):
+    """
+    Convert a JSON string to a dictionary.
+
+    Args:
+        str_to_convert (str): The JSON string to convert
+
+    Returns:
+        dict: Dictionary created from the JSON string
+    """
+
+    try:
+        # Handle cases where string might use single quotes instead of double quotes
+        if "'" in str_to_convert:
+            str_to_convert = str_to_convert.replace("'", '"')
+        return json.loads(str_to_convert)
+    except Exception as e:
+        raise Exception(f"Error converting string {str_to_convert} to dictionary: {str(e)}")

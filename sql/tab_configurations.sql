@@ -1,4 +1,4 @@
-DROP TABLE if exists public.configurations;
+DROP TABLE if exists public.tab_configurations;
 
 CREATE TABLE public.tab_configurations (
 	config_name varchar NOT NULL,
