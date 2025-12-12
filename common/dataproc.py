@@ -17,7 +17,7 @@ class DataprocService:
         return {
                 "step_id": f"step-{task_id}",
                 "pyspark_job": {
-                    "main_python_file_uri": task_type.main_python_file,
+                    "main_python_file_uri": task_type.main_python_file_uri,
                     "args": [
                         "--run_id",
                         run_id,
@@ -28,9 +28,9 @@ class DataprocService:
                         "--is_blocking",
                         str(task.is_blocking)
                     ],
-                    "python_file_uris": task_type.python_file_uris,
+                    "python_file_uris": task_type.additional_python_file_uris,
                     "jar_file_uris": task_type.jar_file_uris,
-                    "file_uris": task_type.file_uris,
+                    "file_uris": task_type.additional_file_uris,
                     "properties": task_type.dataproc_properties
                 },
             }
