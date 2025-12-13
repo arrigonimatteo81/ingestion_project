@@ -1,0 +1,11 @@
+INSERT INTO public.tab_tasks
+(id, source_id, destination_id, description, config_profile, is_blocking)
+VALUES('task_cutomers', 'customer_source', NULL, 'ingestion tabella customer', 'config_1', false);
+
+INSERT INTO public.tab_jdbc_sources
+(source_id, url, username, pwd, driver, tablename, query_text, partitioning_expression, num_partitions)
+VALUES('customer_source', 'mettiamoci_un_url', 'user', 'user2025', 'org.mysql.com', 'cutomers', NULL, NULL, NULL);
+
+INSERT INTO public.tab_task_sources
+(id, source_id, source_type)
+VALUES('id1', 'customer_source', 'jdbc');
