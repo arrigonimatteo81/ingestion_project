@@ -38,24 +38,25 @@ class OrchestratorMetadata(CommonMetadata):
     def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
         cur = self.conn.cursor()
         str_group = "',".join(groups)
+        logger.debug(str_group)
         cur.execute(f"SELECT * FROM public.tab_task_group where group_name in ('{str_group}')")
         rows = cur.fetchall()
         result = []
         for r in rows:
-            result.append(Group(*r[:-1]))
+            result.append(Group(*r))
         return result
 
     def get_task(self, task_id):
         cur = self.conn.cursor()
         cur.execute(f"SELECT * FROM public.tab_tasks where id ='{task_id}'")
         row = cur.fetchone()
-        return Task(*row[:-1])
+        return Task(*row)
 
     def get_task_configuration(self, task_config_profile: str):
         cur = self.conn.cursor()
-        cur.execute(f"SELECT * FROM public.tab_tasks_config where name ='{task_config_profile}'")
+        cur.execute(f"SELECT * FROM public.tab_task_configs where name ='{task_config_profile}'")
         row = cur.fetchone()
-        return TaskType(*row[:-1])
+        return TaskType(*row)
 
     """def load_connections(self):
         cur = self.conn.cursor()
