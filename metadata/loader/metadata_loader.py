@@ -33,7 +33,7 @@ class CommonMetadata(MetadataLoader):
         return result
 
 
-class OrchestratorMetadata(CommonMetadata):
+class OrchestratorMetadata(MetadataLoader):
 
     def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
         cur = self.conn.cursor()
@@ -46,17 +46,26 @@ class OrchestratorMetadata(CommonMetadata):
             result.append(Group(*r))
         return result
 
-    def get_task(self, task_id):
+    def get_task(self, task_id) -> Task:
         cur = self.conn.cursor()
         cur.execute(f"SELECT * FROM public.tab_tasks where id ='{task_id}'")
         row = cur.fetchone()
         return Task(*row)
 
-    def get_task_configuration(self, task_config_profile: str):
+    def get_task_configuration(self, task_config_profile: str) -> TaskType:
         cur = self.conn.cursor()
         cur.execute(f"SELECT * FROM public.tab_task_configs where name ='{task_config_profile}'")
         row = cur.fetchone()
         return TaskType(*row)
+
+class ProcessorMetadata(MetadataLoader):
+    def get_task_processor_type(self, task_id: str) -> str:
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT processor_type FROM public.tab_task_configs where name ='{task_id}'")
+        row = cur.fetchone()
+        return row[0]
+
+
 
     """def load_connections(self):
         cur = self.conn.cursor()
