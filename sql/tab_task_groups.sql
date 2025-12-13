@@ -7,3 +7,5 @@ CREATE TABLE public.tab_task_group (
 );
 
 ALTER TABLE public.tab_task_group ADD CONSTRAINT tab_task_group_tasks_fk FOREIGN KEY (task_id) REFERENCES public.tab_tasks(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+GRANT SELECT ON table public.tab_task_group TO utente;

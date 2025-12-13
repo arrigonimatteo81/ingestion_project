@@ -1,11 +1,8 @@
-from pyspark.sql import SparkSession
 import getopt
 import sys
 
 from common.result import OperationResult
 from common.utils import get_logger, download_from_gcs
-from metadata.loader.metadata_loader import MetadataLoader
-from ingestion.orchestrator import IngestionOrchestrator
 from orchestrator.manager import OrchestratorManager
 
 logger = get_logger(__name__)
@@ -41,7 +38,7 @@ if __name__ == "__main__":
                 f"Skipping download json from gcs since {config_file} doesn't start with gcs"
             )
 
-        orchestrator:OrchestratorManager = OrchestratorManager(run_id=run_id, config_file=config_file, groups=groups)
+        orchestrator: OrchestratorManager = OrchestratorManager(run_id=run_id, config_file=config_file, groups=groups)
 
         orchestrator_result: OperationResult = orchestrator.start()
 
@@ -54,10 +51,9 @@ if __name__ == "__main__":
             )
             sys.exit(1)
 
-
     except getopt.GetoptError as ex:
         logger.error(ex, exc_info=True)
-        #show_usage()
+        # show_usage()
         sys.exit(1)
     except Exception as ex:
         logger.error(ex, exc_info=True)

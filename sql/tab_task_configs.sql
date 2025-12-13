@@ -14,3 +14,6 @@ CREATE TABLE public.tab_task_configs (
 	CONSTRAINT tab_task_configs_pk PRIMARY KEY (name),
 	CONSTRAINT tab_task_configs_processor_type_check CHECK (((processor_type)::text = ANY ((ARRAY['spark'::character varying, 'bigquery'::character varying, 'SPARK'::character varying, 'BIGQUERY'::character varying])::text[])))
 );
+
+
+GRANT SELECT ON table public.tab_task_configs TO utente;

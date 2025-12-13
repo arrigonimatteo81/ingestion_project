@@ -14,3 +14,5 @@ CREATE TABLE public.tab_tasks (
 -- public.tasks foreign keys
 
 ALTER TABLE public.tab_tasks ADD CONSTRAINT tab_tasks_config_fk FOREIGN KEY (config_profile) REFERENCES public.tab_task_configs("name") ON DELETE CASCADE ON UPDATE CASCADE;
+
+GRANT SELECT ON table public.tab_tasks TO utente;

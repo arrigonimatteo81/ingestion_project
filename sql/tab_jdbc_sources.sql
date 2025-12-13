@@ -16,3 +16,5 @@ CREATE TABLE public.tab_jdbc_sources (
 );
 
 ALTER TABLE public.tab_jdbc_sources ADD CONSTRAINT fk_tab_jdbc_sources FOREIGN KEY (source_id) REFERENCES public.tab_task_sources(source_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+GRANT SELECT ON table public.tab_jdbc_sources TO utente;

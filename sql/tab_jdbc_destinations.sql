@@ -11,3 +11,5 @@ CREATE TABLE public.tab_jdbc_destinations (
 );
 
 ALTER TABLE public.tab_jdbc_destinations ADD CONSTRAINT fk_tab_jdbc_destinations FOREIGN KEY (destination_id) REFERENCES public.tab_task_destinations(destination_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+GRANT SELECT ON table public.tab_jdbc_destinations TO utente;

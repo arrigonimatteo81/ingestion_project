@@ -6,3 +6,5 @@ CREATE TABLE public.tab_configurations (
 	description varchar NULL,
 	CONSTRAINT tab_configurations_pk PRIMARY KEY (config_name)
 );
+
+GRANT SELECT ON table public.tab_configurations TO utente;

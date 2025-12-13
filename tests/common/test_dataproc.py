@@ -7,21 +7,23 @@ import unittest
 TEST_RUN_ID = "20250115_1013"
 TEST_APPLICATION_CONF = "application.conf"
 
+
 class MockOrchestratorRepository(OrchestratorMetadata):
     def __init__(self) -> None:
         pass
 
     def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
-        return[Group("DM", "GRP1"), Group("KPI1", "GRP1"),
-               Group("KPI2", "GRP1"), Group("REPORT1", "GRP1"),
-               Group("REPORT2", "GRP1")]
+        return [Group("DM", "GRP1"), Group("KPI1", "GRP1"),
+                Group("KPI2", "GRP1"), Group("REPORT1", "GRP1"),
+                Group("REPORT2", "GRP1")]
 
-    def get_task(self,task_id):
+    def get_task(self, task_id):
         return Task("id_task_1", "source_id_1", "destination_id_1", "Task di test", "profilo_di_test", True)
 
-    def get_task_configuration(self,config_task):
+    def get_task_configuration(self, config_task):
         return TaskType("profilo_di_test", "descrizione profilo di test", "main_file_python.py",
-                        ["additional_file_1.py","additional_file_2.py"], ["jar_file_uri"], ["additional_jar_file_uri"])
+                        ["additional_file_1.py", "additional_file_2.py"], ["jar_file_uri"], ["additional_jar_file_uri"])
+
 
 class TestDataprocService(unittest.TestCase):
     def setUp(self):
@@ -47,7 +49,7 @@ class TestDataprocService(unittest.TestCase):
             "main_file_python.py",
         )  # assert main python file
         self.assertEqual(
-            task1_job.get("pyspark_job").get("python_file_uris"), ["additional_file_1.py","additional_file_2.py"]
+            task1_job.get("pyspark_job").get("python_file_uris"), ["additional_file_1.py", "additional_file_2.py"]
         )  # assert python files
         self.assertEqual(
             task1_job.get("pyspark_job").get("jar_file_uris"), ["jar_file_uri"]
@@ -55,3 +57,13 @@ class TestDataprocService(unittest.TestCase):
         self.assertEqual(
             task1_job.get("pyspark_job").get("file_uris"), ["additional_jar_file_uri"]
         )
+
+    def test_create_to_do_list_of_one_item(self):
+        todo_list = DataprocService.create_todo_list(TEST_APPLICATION_CONF, self.orchestrator_repo, TEST_RUN_ID,
+                                                     {"id_task_1"})
+        self.assertEqual(1, len(todo_list))
+
+    def test_create_to_do_list_of_two_items(self):
+        todo_list = DataprocService.create_todo_list(TEST_APPLICATION_CONF, self.orchestrator_repo, TEST_RUN_ID,
+                                                     {"id_task_1", "id_task_2"})
+        self.assertEqual(2, len(todo_list))

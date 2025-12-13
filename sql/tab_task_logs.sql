@@ -11,3 +11,5 @@ CREATE TABLE public.tab_task_logs (
 	rows_affected int4 NULL,
 	CONSTRAINT tab_task_logs_pk PRIMARY KEY (task_id, update_ts)
 );
+
+GRANT SELECT ON table public.tab_task_logs TO utente;
