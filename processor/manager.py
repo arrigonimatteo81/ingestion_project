@@ -6,7 +6,6 @@ from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
-from metadata.models.tab_src import TabSrc
 from processor.destinations.base import Destination
 from processor.destinations.jdbc_destinations import TableJDBCDestination
 from processor.domain import ProcessorType, SourceType, DestinationType

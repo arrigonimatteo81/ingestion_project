@@ -15,3 +15,9 @@ class DestinationType(Enum):
     FILE = "FILE"
     BIGQUERY = "BIGQUERY"
 
+class TaskState(Enum):
+    PLANNED = "PLANNED"
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
+    SUCCESSFUL = "SUCCESSFUL"
+    WARNING = "WARNING"

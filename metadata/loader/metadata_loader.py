@@ -1,10 +1,13 @@
 import psycopg2
+from datetime import datetime
 
 from common.utils import get_logger
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from metadata.models.tab_config import Config
 from metadata.models.tab_groups import Group
+from metadata.models.tab_log import TaskLog
 from metadata.models.tab_tasks import Task, TaskType
+from processor.domain import TaskState
 
 logger = get_logger(__name__)
 
@@ -102,6 +105,45 @@ class ProcessorMetadata(MetadataLoader):
             f"SELECT url,username,pwd,driver,tablename, overwrite FROM public.tab_jdbc_destinations where destination_id ='{destination_id}'")
         row = cur.fetchone()
         return TabJDBCDest(*row)
+
+    def get_task_group(self, task_id) -> str:
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT group_name FROM public.tab_task_group where task_id ='{task_id}'")
+        row = cur.fetchone()
+        return row[0]
+
+    def save_task_log(self, log: TaskLog):
+        cur = self.conn.cursor()
+        cur.execute(f"INSERT INTO public.tab_task_logs values('{log.task}','{log.run_id}','{log.state.value}','{log.description}',"
+                    f"'{log.error_message}','{log.update_ts}','{log.task_group}')")
+
+
+class LogMetadata(ProcessorMetadata):
+
+    def _insert_task_log(
+            self,
+            task_id: str,
+            run_id: str,
+            task_state: TaskState,
+            task_log_description: str = "",
+            error_message: str = "",
+            update_ts: datetime = datetime.now(),
+            rows_affected: int = 0
+    ):
+        if update_ts is None:
+            update_ts = datetime.now()
+        group: str = self.get_task_group(task_id)
+        task_log = TaskLog(
+            task=task_id,
+            run_id=run_id,
+            state=task_state,
+            task_group=group,
+            description=task_log_description,
+            error_message=error_message,
+            update_ts=update_ts
+        )
+        self.save_task_log(task_log)
+
 
     """def load_connections(self):
         cur = self.conn.cursor()
