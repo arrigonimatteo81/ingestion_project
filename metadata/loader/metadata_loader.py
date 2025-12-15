@@ -2,6 +2,7 @@ import psycopg2
 from datetime import datetime
 
 from common.utils import get_logger
+from metadata.models.tab_file import TabFileSource, TabFileDest
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from metadata.models.tab_config import Config
 from metadata.models.tab_groups import Group
@@ -92,6 +93,13 @@ class ProcessorMetadata(MetadataLoader):
         row = cur.fetchone()
         return TabJDBCSource(*row)
 
+    def get_file_source_info(self, source_id: str) -> TabFileSource:
+        cur = self.conn.cursor()
+        cur.execute(
+            f"SELECT file_type,path,excel_sheet,csv_separator FROM public.tab_file_sources where source_id ='{source_id}'")
+        row = cur.fetchone()
+        return TabFileSource(*row)
+
     def get_destination_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
         cur.execute(f"SELECT destination_id, destination_type FROM public.tab_tasks a join tab_task_destinations b on a.destination_id = b.destination_id "
@@ -106,21 +114,54 @@ class ProcessorMetadata(MetadataLoader):
         row = cur.fetchone()
         return TabJDBCDest(*row)
 
+    def get_file_dest_info(self, destination_id: str) -> TabFileDest:
+        cur = self.conn.cursor()
+        cur.execute(
+            f"SELECT format_file,gcs_path,overwrite,cvs_separator FROM public.tab_file_destinations where destination_id ='{destination_id}'")
+        row = cur.fetchone()
+        return TabFileDest(*row)
+
     def get_task_group(self, task_id) -> str:
         cur = self.conn.cursor()
         cur.execute(f"SELECT group_name FROM public.tab_task_group where task_id ='{task_id}'")
         row = cur.fetchone()
         return row[0]
 
-    def save_task_log(self, log: TaskLog):
-        cur = self.conn.cursor()
-        cur.execute(f"INSERT INTO public.tab_task_logs values('{log.task}','{log.run_id}','{log.state.value}','{log.description}',"
-                    f"'{log.error_message}','{log.update_ts}','{log.task_group}')")
+    def insert_task_log_running(self, task_id: str, run_id: str, description: str = ""):
+        self.insert_task_log(
+            task_id=task_id,
+            run_id=run_id,
+            task_state=TaskState.RUNNING,
+            task_log_description=description,
+        )
 
+    def insert_task_log_successful(self, task_id: str, run_id: str, description: str = ""):
+        self.insert_task_log(
+            task_id=task_id,
+            run_id=run_id,
+            task_state=TaskState.SUCCESSFUL,
+            task_log_description=description,
+        )
 
-class LogMetadata(ProcessorMetadata):
+    def insert_task_log_failed(self, task_id: str, run_id: str, error_message: str, description: str = ""):
+        self.insert_task_log(
+            task_id=task_id,
+            run_id=run_id,
+            task_state=TaskState.FAILED,
+            task_log_description=description,
+            error_message= error_message
+        )
 
-    def _insert_task_log(
+    def insert_task_log_warning(self, task_id: str, run_id: str, error_message: str, description: str = ""):
+        self.insert_task_log(
+            task_id=task_id,
+            run_id=run_id,
+            task_state=TaskState.WARNING,
+            task_log_description=description,
+            error_message= error_message
+        )
+
+    def insert_task_log(
             self,
             task_id: str,
             run_id: str,
@@ -142,7 +183,12 @@ class LogMetadata(ProcessorMetadata):
             error_message=error_message,
             update_ts=update_ts
         )
-        self.save_task_log(task_log)
+        self._save_task_log(task_log)
+
+    def _save_task_log(self, log: TaskLog):
+        cur = self.conn.cursor()
+        cur.execute(f"INSERT INTO public.tab_task_logs values('{log.task}','{log.run_id}','{log.state.value}','{log.description}',"
+                    f"'{log.error_message}','{log.update_ts}','{log.task_group}')")
 
 
     """def load_connections(self):

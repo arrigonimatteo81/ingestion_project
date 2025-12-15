@@ -10,6 +10,12 @@ class SourceType(Enum):
     FILE = "FILE"
     BIGQUERY = "BIGQUERY"
 
+class FileFormat(Enum):
+    EXCEL = "EXCEL"
+    PARQUET = "PARQUET"
+    CSV = "CSV"
+    AVRO = "AVRO"
+
 class DestinationType(Enum):
     JDBC = "JDBC"
     FILE = "FILE"

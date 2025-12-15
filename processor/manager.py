@@ -4,12 +4,15 @@ from pyspark.sql import SparkSession
 
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
-from metadata.loader.metadata_loader import ProcessorMetadata
+from metadata.loader.metadata_loader import ProcessorMetadata, LogMetadata
+from metadata.models.tab_file import TabFileSource, TabFileDest
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from processor.destinations.base import Destination
+from processor.destinations.file_destinations import CsvFileDestination, ParquetFileDestination
 from processor.destinations.jdbc_destinations import TableJDBCDestination
-from processor.domain import ProcessorType, SourceType, DestinationType
+from processor.domain import ProcessorType, SourceType, DestinationType, TaskState, FileFormat
 from processor.sources.base import Source
+from processor.sources.file_sources import ExcelFileSource, CsvFileSource, ParquetFileSource
 from processor.sources.jdbc_sources import TableJDBCSource, QueryJDBCSource
 
 logger = get_logger(__name__)
@@ -24,7 +27,6 @@ class BaseProcessorManager (ABC):
             config_file, "CONNECTION_PARAMS"
         )
         self._repository = ProcessorMetadata(self._connection_string)
-        #self._task_state_manager = TaskLogManager(repository=self._repository)
 
     def _get_common_data(self):
         """Retrieve common data needed by all processor types"""
@@ -67,21 +69,22 @@ class SparkProcessorManager (BaseProcessorManager):
 
     def start(self) -> OperationResult:
         try:
+            self._repository.insert_task_log_running( self._task_id,self._run_id)
             task_source, task_is_blocking, task_destination = self._get_common_data()
 
             df = task_source.to_dataframe(self._get_spark_session())
             task_destination.write(df)
+            self._repository.insert_task_log_successful(self._task_id, self._run_id,
+                                                        f"task {self._task_id} concluso con successo")
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
-            #if task_is_blocking.is_blocking:
-                #self._task_state_manager.insert_task_log_failed(task_id=self._task_id, run_id=self._run_id,
-                #                                                description=f"task {self._task_id} in ERROR!",
-                #                                                error_message=exc.__str__())
-            #else:
-                #self._task_state_manager.insert_task_log_failed_not_blocking(task_id=self._task_id, run_id=self._run_id,
-                #                                                             description=f"task {self._task_id} in ERROR but is not blocking",
-                #                                                             error_message=exc.__str__())
+            if task_is_blocking:
+                self._repository.insert_task_log_failed(self._task_id, self._run_id,exc.__str__(),
+                                                 f"task {self._task_id} in ERRORE!")
+            else:
+                self._repository.insert_task_log_warning(self._task_id, self._run_id, exc.__str__(),
+                                                        f"task {self._task_id} in ERRORE ma non bloccante")
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 
@@ -119,8 +122,14 @@ class SourceFactory:
                 return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
             elif jdbc_source.query_text:
                 return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.query_text)
-        #if source_type.upper() == SourceType.FILE.value:
-
+        elif source_type.upper() == SourceType.FILE.value:
+            file_source: TabFileSource = repository.get_file_source_info(source_id)
+            if file_source.file_type.upper() == FileFormat.EXCEL:
+                return ExcelFileSource(file_source.path, file_source.sheet)
+            elif file_source.file_type.upper() == FileFormat.CSV:
+                return CsvFileSource(file_source.path, file_source.csv_separator)
+            elif file_source.file_type.upper() == FileFormat.PARQUET:
+                return ParquetFileSource(file_source.path)
         #if source_type.upper() == SourceType.BIGQUERY.value:
 
 class DestinationFactory:
@@ -132,6 +141,11 @@ class DestinationFactory:
             jdbc_destination :TabJDBCDest = repository.get_jdbc_dest_info(destination_id)
             return TableJDBCDestination(jdbc_destination.username,jdbc_destination.pwd, jdbc_destination.driver,
                                         jdbc_destination.url, jdbc_destination.tablename, jdbc_destination.overwrite)
-        #if source_type.upper() == SourceType.FILE.value:
+        elif destination_type.upper() == SourceType.FILE.value:
+            file_destination: TabFileDest = repository.get_file_dest_info(destination_id)
+            if file_destination.file_type.upper() == FileFormat.CSV:
+                return CsvFileDestination(file_destination.path, file_destination.csv_separator,file_destination.overwrite)
+            elif file_destination.file_type.upper() == FileFormat.PARQUET:
+                return ParquetFileDestination(file_destination.path, file_destination.overwrite)
 
         #if source_type.upper() == SourceType.BIGQUERY.value:
