@@ -1,6 +1,7 @@
 import psycopg2
 
 from common.utils import get_logger
+from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from metadata.models.tab_config import Config
 from metadata.models.tab_groups import Group
 from metadata.models.tab_tasks import Task, TaskType
@@ -59,13 +60,48 @@ class OrchestratorMetadata(MetadataLoader):
         return TaskType(*row)
 
 class ProcessorMetadata(MetadataLoader):
+
+    def get_task_is_blocking(self, task_id: str) -> bool:
+        cur = self.conn.cursor()
+        cur.execute(
+            f"SELECT coalesce(is_blocking,True) as is_blocking FROM public.tab_tasks where id ='{task_id}'")
+        row = cur.fetchone()
+        return bool(row[0])
+
     def get_task_processor_type(self, task_id: str) -> str:
         cur = self.conn.cursor()
         cur.execute(f"SELECT processor_type FROM public.tab_task_configs where name ='{task_id}'")
         row = cur.fetchone()
         return row[0]
 
+    def get_source_info(self, task_id: str) -> (str,str):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT source_id, source_type FROM public.tab_tasks a join tab_task_sources b on a.source_id = b.source_id "
+                    f"where id ='{task_id}'")
+        row = cur.fetchone()
+        return row[0]
 
+    def get_jdbc_source_info(self, source_id: str) -> TabJDBCSource:
+        cur = self.conn.cursor()
+        cur.execute(
+            f"SELECT url,username,pwd,driver,tablename,query_text,partitioning_expression,num_partitions "
+            f"FROM public.tab_jdbc_sources where source_id ='{source_id}'")
+        row = cur.fetchone()
+        return TabJDBCSource(*row)
+
+    def get_destination_info(self, task_id: str) -> (str,str):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT destination_id, destination_type FROM public.tab_tasks a join tab_task_destinations b on a.destination_id = b.destination_id "
+                    f"where id ='{task_id}'")
+        row = cur.fetchone()
+        return row[0]
+
+    def get_jdbc_dest_info(self, destination_id: str) -> TabJDBCDest:
+        cur = self.conn.cursor()
+        cur.execute(
+            f"SELECT url,username,pwd,driver,tablename, overwrite FROM public.tab_jdbc_destinations where destination_id ='{destination_id}'")
+        row = cur.fetchone()
+        return TabJDBCDest(*row)
 
     """def load_connections(self):
         cur = self.conn.cursor()

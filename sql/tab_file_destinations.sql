@@ -4,6 +4,7 @@ CREATE TABLE public.tab_file_destinations (
 	destination_id varchar NOT NULL,
 	format_file varchar NOT NULL,
 	gcs_path varchar NOT NULL,
+	overwrite bool
 	CONSTRAINT chk_format_file CHECK (((format_file)::text = ANY ((ARRAY['excel'::character varying, 'parquet'::character varying, 'avro'::character varying, 'csv'::character varying, 'EXCEL'::character varying, 'PARQUET'::character varying, 'AVRO'::character varying, 'CSV'::character varying])::text[]))),
 	CONSTRAINT tab_destinations_file_pk PRIMARY KEY (destination_id)
 );
