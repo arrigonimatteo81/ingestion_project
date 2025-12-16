@@ -7,6 +7,18 @@ from processor.manager import ProcessorManagerFactory
 
 logger = get_logger(__name__)
 
+
+def run_processor(run_id,task_id,config_file):
+
+    logger.debug("Creating transformer")
+    processor = ProcessorManagerFactory.create_processor_manager(
+        run_id=run_id, task_id=task_id, config_file=config_file
+    )
+    logger.info("Executing transformation task")
+    processor_result: OperationResult = processor.start()
+    return processor_result
+
+
 if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(
@@ -27,7 +39,7 @@ if __name__ == "__main__":
 
     try:
         print(
-            f"Starting processor_main with run_id: '{run_id}', task_id: '{task_id}', config_file: '{config_file}', is_blocking: {is_blocking}"
+            f"Starting processor_main with run_id: {run_id}, task_id: {task_id}, config_file: {config_file}, is_blocking: {is_blocking}"
         )
         if config_file.lower().startswith("gs://"):
             logger.info(f"Download {config_file} from gcs...")
@@ -37,13 +49,7 @@ if __name__ == "__main__":
                 f"Skipping download json from gcs since {config_file} doesn't start with gcs"
             )
 
-        logger.debug("Creating transformer")
-        processor = ProcessorManagerFactory.create_processor_manager(
-            run_id=run_id, task_id=task_id, config_file=config_file
-        )
-
-        logger.info("Executing transformation task")
-        processor_result: OperationResult = processor.start()
+        processor_result = run_processor(run_id,task_id,config_file)
         logger.info(
             f"transformation task completed exited successfully: {processor_result.successful}"
         )

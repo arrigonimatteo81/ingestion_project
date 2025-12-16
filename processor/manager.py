@@ -1,10 +1,11 @@
+import logging
 from abc import ABC, abstractmethod
 
 from pyspark.sql import SparkSession
 
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
-from metadata.loader.metadata_loader import ProcessorMetadata, LogMetadata
+from metadata.loader.metadata_loader import ProcessorMetadata
 from metadata.models.tab_file import TabFileSource, TabFileDest
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from processor.destinations.base import Destination
@@ -33,6 +34,7 @@ class BaseProcessorManager (ABC):
         logger.debug(f"Retrieving transformations for task_id={self._task_id}")
 
         source_id,source_type = self._repository.get_source_info(self._task_id)
+
         task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file)
         logger.info(
             f"Source retrieved for task_id={self._task_id}: {task_source}"
@@ -59,9 +61,9 @@ class BaseProcessorManager (ABC):
 class SparkProcessorManager (BaseProcessorManager):
 
     def _get_spark_session(self) -> SparkSession:
-        spark = SparkSession.builder.appName(
-            f"Processor_{self._run_id}_{self._task_id}"
-        ).getOrCreate()
+        spark = SparkSession.builder.appName(f"Processor_{self._run_id}_{self._task_id}") \
+        .config("spark.jars.packages", "/Users/u469525/PycharmProjects/ingestion_project/jar/postgresql-42.7.8.jar") \
+        .getOrCreate()
         logger.debug(
             f"SparkSession properties: {spark.sparkContext.getConf().getAll()}"
         )
@@ -69,22 +71,25 @@ class SparkProcessorManager (BaseProcessorManager):
 
     def start(self) -> OperationResult:
         try:
-            self._repository.insert_task_log_running( self._task_id,self._run_id)
+            ##self._repository.insert_task_log_running( self._task_id,self._run_id)
+            print(f"inizio {self._task_id}, {self._run_id}")
             task_source, task_is_blocking, task_destination = self._get_common_data()
 
             df = task_source.to_dataframe(self._get_spark_session())
             task_destination.write(df)
-            self._repository.insert_task_log_successful(self._task_id, self._run_id,
-                                                        f"task {self._task_id} concluso con successo")
+            #self._repository.insert_task_log_successful(self._task_id, self._run_id,
+            #                                            f"task {self._task_id} concluso con successo")
+            print(f"task {self._task_id} concluso con successo")
+
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
-            if task_is_blocking:
-                self._repository.insert_task_log_failed(self._task_id, self._run_id,exc.__str__(),
-                                                 f"task {self._task_id} in ERRORE!")
-            else:
-                self._repository.insert_task_log_warning(self._task_id, self._run_id, exc.__str__(),
-                                                        f"task {self._task_id} in ERRORE ma non bloccante")
+            #if True: #task_is_blocking:
+            #    self._repository.insert_task_log_failed(self._task_id, self._run_id,exc.__str__(),
+            #                                     f"task {self._task_id} in ERRORE!")
+            #else:
+            #    self._repository.insert_task_log_warning(self._task_id, self._run_id, exc.__str__(),
+            #                                           f"task {self._task_id} in ERRORE ma non bloccante")
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 

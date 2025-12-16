@@ -74,16 +74,16 @@ class ProcessorMetadata(MetadataLoader):
 
     def get_task_processor_type(self, task_id: str) -> str:
         cur = self.conn.cursor()
-        cur.execute(f"SELECT processor_type FROM public.tab_task_configs where name ='{task_id}'")
+        cur.execute(f"select processor_type from public.tab_tasks join public.tab_task_configs on tab_tasks.config_profile  = tab_task_configs.name where tab_tasks.id='{task_id}'")
         row = cur.fetchone()
         return row[0]
 
     def get_source_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
-        cur.execute(f"SELECT source_id, source_type FROM public.tab_tasks a join tab_task_sources b on a.source_id = b.source_id "
-                    f"where id ='{task_id}'")
+        cur.execute(f"SELECT b.source_id, b.source_type FROM public.tab_tasks a join public.tab_task_sources b on a.source_id = b.source_id  "
+                    f"where a.id ='{task_id}'")
         row = cur.fetchone()
-        return row[0]
+        return row
 
     def get_jdbc_source_info(self, source_id: str) -> TabJDBCSource:
         cur = self.conn.cursor()
@@ -102,10 +102,10 @@ class ProcessorMetadata(MetadataLoader):
 
     def get_destination_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
-        cur.execute(f"SELECT destination_id, destination_type FROM public.tab_tasks a join tab_task_destinations b on a.destination_id = b.destination_id "
-                    f"where id ='{task_id}'")
+        cur.execute(f"SELECT b.destination_id, b.destination_type FROM public.tab_tasks a join public.tab_task_destinations b on a.destination_id = b.destination_id "
+                    f"where a.id ='{task_id}'")
         row = cur.fetchone()
-        return row[0]
+        return row
 
     def get_jdbc_dest_info(self, destination_id: str) -> TabJDBCDest:
         cur = self.conn.cursor()
@@ -117,7 +117,7 @@ class ProcessorMetadata(MetadataLoader):
     def get_file_dest_info(self, destination_id: str) -> TabFileDest:
         cur = self.conn.cursor()
         cur.execute(
-            f"SELECT format_file,gcs_path,overwrite,cvs_separator FROM public.tab_file_destinations where destination_id ='{destination_id}'")
+            f"SELECT format_file,gcs_path,overwrite,csv_separator FROM public.tab_file_destinations where destination_id ='{destination_id}'")
         row = cur.fetchone()
         return TabFileDest(*row)
 

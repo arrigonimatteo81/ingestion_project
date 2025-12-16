@@ -1,7 +1,9 @@
+import main_processor
 from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
 from metadata.loader.metadata_loader import OrchestratorMetadata
+import subprocess
 
 logger = get_logger(__name__)
 
@@ -40,7 +42,20 @@ class OrchestratorManager:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
             todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks)
             for i in todo_list:
-                print(f"{i}")
+                #print(f"{i}")
+                #cmd = [
+                #    "spark-submit",
+                #    i['pyspark_job']['main_python_file_uri'],
+                #    f"-t {i['pyspark_job']['args'][1]}", f"-r {i['pyspark_job']['args'][3]}", f"-c {i['pyspark_job']['args'][5]}", "-b False"
+                #]
+
+                #subprocess.run(cmd, check=True, text=True)
+                main_processor.run_processor(i["pyspark_job"]["args"][1], i["pyspark_job"]["args"][3], i["pyspark_job"]["args"][5])
+                #print(i["pyspark_job"]["main_python_file_uri"])
+                #print(i["pyspark_job"]["args"][1])
+
+                #if __name__ == '__main__':
+                #    main_processor(r=self._run_id,t=i.)
             return OperationResult(successful=True, description="Tutto ok")
 
 

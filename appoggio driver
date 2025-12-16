@@ -1,0 +1,13 @@
+def read(self):
+    module = importlib.import_module(self.cfg["extra_params"]["module"])
+    conn = module.connect(
+        host=self.cfg["host"],
+        port=self.cfg["port"],
+        user=self.cfg["user"],
+        password=self.cfg["password"],
+        dbname=self.cfg["db_name"]
+    )
+    import pandas as pd
+    pdf = pd.read_sql(self.query or f"SELECT * FROM {self.table}", conn)
+    conn.close()
+    return self.spark.createDataFrame(pdf)
