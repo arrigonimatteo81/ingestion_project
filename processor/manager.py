@@ -48,7 +48,7 @@ class BaseProcessorManager (ABC):
         destination_id, destination_type = self._repository.get_destination_info(self._task_id)
         task_destination: Destination = DestinationFactory.create_destination(destination_type, destination_id, self._config_file)
         logger.info(
-            f"Destination retrieved for task_id={self._task_id}: {task_source}"
+            f"Destination retrieved for task_id={self._task_id}: {task_destination}"
         )
 
         return task_source, task_is_blocking, task_destination
@@ -62,8 +62,7 @@ class SparkProcessorManager (BaseProcessorManager):
 
     def _get_spark_session(self) -> SparkSession:
         spark = SparkSession.builder.appName(f"Processor_{self._run_id}_{self._task_id}") \
-        .config("spark.jars", "/Users/u469525/PycharmProjects/ingestion_project/jar/postgresql-42.7.8.jar") \
-        .getOrCreate()
+                .getOrCreate()
         logger.debug(
             f"SparkSession properties: {spark.sparkContext.getConf().getAll()}"
         )
@@ -74,8 +73,8 @@ class SparkProcessorManager (BaseProcessorManager):
             ##self._repository.insert_task_log_running( self._task_id,self._run_id)
             print(f"inizio {self._task_id}, {self._run_id}")
             task_source, task_is_blocking, task_destination = self._get_common_data()
-
-            df = task_source.to_dataframe(self._get_spark_session())
+            session = self._get_spark_session()
+            df = task_source.to_dataframe(session)
             task_destination.write(df)
             #self._repository.insert_task_log_successful(self._task_id, self._run_id,
             #                                            f"task {self._task_id} concluso con successo")
@@ -146,11 +145,11 @@ class DestinationFactory:
             jdbc_destination :TabJDBCDest = repository.get_jdbc_dest_info(destination_id)
             return TableJDBCDestination(jdbc_destination.username,jdbc_destination.pwd, jdbc_destination.driver,
                                         jdbc_destination.url, jdbc_destination.tablename, jdbc_destination.overwrite)
-        elif destination_type.upper() == SourceType.FILE.value:
+        elif destination_type.upper() == DestinationType.FILE.value:
             file_destination: TabFileDest = repository.get_file_dest_info(destination_id)
-            if file_destination.file_type.upper() == FileFormat.CSV:
+            if file_destination.file_type.upper() == FileFormat.CSV.value:
                 return CsvFileDestination(file_destination.path, file_destination.csv_separator,file_destination.overwrite)
-            elif file_destination.file_type.upper() == FileFormat.PARQUET:
+            elif file_destination.file_type.upper() == FileFormat.PARQUET.value:
                 return ParquetFileDestination(file_destination.path, file_destination.overwrite)
 
         #if source_type.upper() == SourceType.BIGQUERY.value:

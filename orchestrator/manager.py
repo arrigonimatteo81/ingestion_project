@@ -42,20 +42,18 @@ class OrchestratorManager:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
             todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks)
             for i in todo_list:
-                #print(f"{i}")
-                #cmd = [
-                #    "spark-submit",
-                #    i['pyspark_job']['main_python_file_uri'],
-                #    f"-t {i['pyspark_job']['args'][1]}", f"-r {i['pyspark_job']['args'][3]}", f"-c {i['pyspark_job']['args'][5]}", "-b False"
-                #]
+                cmd = [
+                     "spark-submit",
+                     "--jars", ",".join(i['pyspark_job']['jar_file_uris']),
+                     f"{i['pyspark_job']['main_python_file_uri']}",
+                     "-r", f"{i['pyspark_job']['args'][1]}",
+                     "-t", f"{i['pyspark_job']['args'][3]}",
+                     "-c", f"{i['pyspark_job']['args'][5]}",
+                     "-b", f"{i['pyspark_job']['args'][7]}"
+                 ]
 
-                #subprocess.run(cmd, check=True, text=True)
-                main_processor.run_processor(i["pyspark_job"]["args"][1], i["pyspark_job"]["args"][3], i["pyspark_job"]["args"][5])
-                #print(i["pyspark_job"]["main_python_file_uri"])
-                #print(i["pyspark_job"]["args"][1])
+                subprocess.run(cmd, check=True, text=True, shell=False)
 
-                #if __name__ == '__main__':
-                #    main_processor(r=self._run_id,t=i.)
             return OperationResult(successful=True, description="Tutto ok")
 
 
