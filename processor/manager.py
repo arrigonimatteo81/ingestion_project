@@ -62,7 +62,7 @@ class SparkProcessorManager (BaseProcessorManager):
 
     def _get_spark_session(self) -> SparkSession:
         spark = SparkSession.builder.appName(f"Processor_{self._run_id}_{self._task_id}") \
-        .config("spark.jars.packages", "/Users/u469525/PycharmProjects/ingestion_project/jar/postgresql-42.7.8.jar") \
+        .config("spark.jars", "/Users/u469525/PycharmProjects/ingestion_project/jar/postgresql-42.7.8.jar") \
         .getOrCreate()
         logger.debug(
             f"SparkSession properties: {spark.sparkContext.getConf().getAll()}"
