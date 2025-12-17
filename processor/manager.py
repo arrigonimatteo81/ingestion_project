@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+import os
 from pyspark.sql import SparkSession
 
 from common.result import OperationResult
@@ -60,6 +60,7 @@ class BaseProcessorManager (ABC):
 class SparkProcessorManager (BaseProcessorManager):
 
     def _get_spark_session(self) -> SparkSession:
+        os.environ["SPARK_LOCAL_HOSTNAME"] = "localhost"
         spark = SparkSession.builder.appName(f"Processor_{self._run_id}_{self._task_id}") \
                 .getOrCreate()
         logger.debug(
@@ -69,25 +70,26 @@ class SparkProcessorManager (BaseProcessorManager):
 
     def start(self) -> OperationResult:
         try:
-            ##self._repository.insert_task_log_running( self._task_id,self._run_id)
+
+            self._repository.insert_task_log_running( self._task_id,self._run_id, f"task {self._task_id} avviato")
             logger.debug(f"inizio {self._task_id}, {self._run_id}")
             task_source, task_is_blocking, task_destination = self._get_common_data()
             session = self._get_spark_session()
             df = task_source.to_dataframe(session)
             task_destination.write(df)
-            #self._repository.insert_task_log_successful(self._task_id, self._run_id,
-            #                                            f"task {self._task_id} concluso con successo")
+            self._repository.insert_task_log_successful(self._task_id, self._run_id,
+                                                        f"task {self._task_id} concluso con successo")
             logger.debug(f"task {self._task_id} concluso con successo")
 
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
-            #if True: #task_is_blocking:
-            #    self._repository.insert_task_log_failed(self._task_id, self._run_id,exc.__str__(),
-            #                                     f"task {self._task_id} in ERRORE!")
-            #else:
-            #    self._repository.insert_task_log_warning(self._task_id, self._run_id, exc.__str__(),
-            #                                           f"task {self._task_id} in ERRORE ma non bloccante")
+            if task_is_blocking:
+                self._repository.insert_task_log_failed(self._task_id, self._run_id,exc.__str__(),
+                                                 f"task {self._task_id} in ERRORE!")
+            else:
+                self._repository.insert_task_log_warning(self._task_id, self._run_id, exc.__str__(),
+                                                       f"task {self._task_id} in ERRORE ma non bloccante")
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 

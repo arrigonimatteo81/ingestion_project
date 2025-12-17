@@ -11,3 +11,6 @@ def read(self):
     pdf = pd.read_sql(self.query or f"SELECT * FROM {self.table}", conn)
     conn.close()
     return self.spark.createDataFrame(pdf)
+
+ source .venv/bin/activate
+ python3 main_orchestrator.py -r 20251217_153500 -g TEST_GROUP_2 -c application.conf

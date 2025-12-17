@@ -8,8 +8,7 @@ CREATE TABLE public.tab_task_logs (
 	error_message varchar NULL,
 	update_ts timestamp DEFAULT now() NOT NULL,
 	task_group varchar DEFAULT ''::character varying NOT NULL,
-	rows_affected int4 NULL,
-	CONSTRAINT tab_task_logs_pk PRIMARY KEY (task_id, update_ts)
+	rows_affected int4 NULL
 );
 
 GRANT SELECT ON table public.tab_task_logs TO utente;
