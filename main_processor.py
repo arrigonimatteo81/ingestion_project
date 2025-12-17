@@ -3,7 +3,7 @@ import sys
 
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file, download_from_gcs
-from processor.manager import ProcessorManagerFactory
+from factories.processor_manager_factory import ProcessorManagerFactory
 
 logger = get_logger(__name__)
 

@@ -1,19 +1,39 @@
-from connectors.source_strategies import JDBCSource, CSVSource, DriverSource, SourceStrategy
+from common.utils import extract_field_from_file, get_logger
+from metadata.loader.metadata_loader import ProcessorMetadata
+from metadata.models.tab_file import TabFileSource
+from metadata.models.tab_jdbc import TabJDBCSource
+from processor.domain import SourceType, FileFormat
+from processor.sources.base import Source
+from processor.sources.file_sources import ExcelFileSource, CsvFileSource, ParquetFileSource
+from processor.sources.jdbc_sources import TableJDBCSource, QueryJDBCSource
+
+logger = get_logger(__name__)
 
 
 class SourceFactory:
-
     @staticmethod
-    def create(spark, src_cfg, conn_cfg) -> SourceStrategy:
-        t = conn_cfg["conn_type"]
-
-        if t == "jdbc":
-            return JDBCSource(spark, conn_cfg, src_cfg["src_table"], src_cfg["src_query"])
-
-        if t == "csv":
-            return CSVSource(spark, src_cfg["file_path"])
-
-        if t == "driver":
-            return DriverSource(spark, conn_cfg, src_cfg["src_table"], src_cfg["src_query"])
-
-        raise ValueError(f"Sorgente non supportata: {t}")
+    def create_source(source_type: str, source_id: str, config_file: str) -> Source:
+        connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
+        repository = ProcessorMetadata(connection_string)
+        try:
+            if source_type.upper() == SourceType.JDBC.value:
+                jdbc_source :TabJDBCSource = repository.get_jdbc_source_info(source_id)
+                if jdbc_source.tablename:
+                    return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
+                elif jdbc_source.query_text:
+                    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.query_text)
+            elif source_type.upper() == SourceType.FILE.value:
+                file_source: TabFileSource = repository.get_file_source_info(source_id)
+                if file_source.file_type.upper() == FileFormat.EXCEL.value:
+                    return ExcelFileSource(file_source.path, file_source.sheet)
+                elif file_source.file_type.upper() == FileFormat.CSV.value:
+                    return CsvFileSource(file_source.path, file_source.csv_separator)
+                elif file_source.file_type.upper() == FileFormat.PARQUET.value:
+                    return ParquetFileSource(file_source.path)
+            #if source_type.upper() == SourceType.BIGQUERY.value:
+            else:
+                logger.error("Unsupported source type!!!")
+                raise ValueError(f"Unsupported source type: {source_type}")
+        except Exception as exc:
+            logger.error(f"Failed to create source: {exc}")
+            raise
