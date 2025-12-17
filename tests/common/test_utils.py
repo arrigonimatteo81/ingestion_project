@@ -2,12 +2,13 @@ import unittest
 import logging
 import os
 import pytest
+from pandas.core.computation.common import result_type_many
 
 from common.utils import (
     extract_field_from_file,
     get_log_level_from_file,
     string_to_dict,
-    dict_to_string
+    dict_to_string, get_logger
 )
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +16,7 @@ CONF_PATH = f"{test_dir}/resources/application.conf"
 
 DEFAULT_LOG_LEVEL = logging.INFO
 ROOT_PACKAGE_NAME = "root"
+
 
 class TestFunctionExtractFieldFromFile(unittest.TestCase):
 
@@ -132,3 +134,30 @@ class TestJsonConversionFunctions(unittest.TestCase):
         mystr: str = '{"key1": "value1", "key2": 123, "key3": true}'
         mystr_converted: str = dict_to_string(string_to_dict(mystr))
         self.assertEqual(mystr, mystr_converted)
+
+class TestGetLogger(unittest.TestCase):
+
+    print(__name__)
+    def test_log_level(self):
+        result=get_logger("orchestrator.main_orchestrator.py",CONF_PATH)
+        self.assertEqual(logging.ERROR,result.level)
+
+    def test_log_level_for_non_existing_name(self):
+        result=get_logger("nonexists.non_exists.py",CONF_PATH)
+        self.assertEqual(logging.WARNING,result.level)
+
+    def test_log_isEnabled_for_debug(self):
+        result=get_logger("processor.main_processor.py",CONF_PATH)
+        self.assertTrue(result.isEnabledFor(logging.DEBUG))
+
+    def test_log_isEnabled_for_info(self):
+        result=get_logger("processor.main_processor.py",CONF_PATH)
+        self.assertTrue(result.isEnabledFor(logging.INFO))
+
+    def test_log_isNotEnabled_for_info(self):
+        result=get_logger("test_package.file.py",CONF_PATH)
+        self.assertFalse(result.isEnabledFor(logging.INFO))
+
+    def test_log_level_double_package(self):
+        result=get_logger(__name__,CONF_PATH)
+        self.assertEqual(logging.CRITICAL,result.level)

@@ -26,7 +26,7 @@ if __name__ == "__main__":
             elif opt in ("-c", "--config_file"):
                 config_file = arg
 
-        print(
+        logger.info(
             f"Starting main_orchestrator with run_id: {run_id}, groups: {groups}, config_file: {config_file}"
         )
 

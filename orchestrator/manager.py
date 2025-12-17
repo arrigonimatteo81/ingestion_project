@@ -1,9 +1,9 @@
-import main_processor
+import subprocess
+
 from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
 from metadata.loader.metadata_loader import OrchestratorMetadata
-import subprocess
 
 logger = get_logger(__name__)
 
