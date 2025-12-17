@@ -6,7 +6,16 @@ CREATE TABLE public.tab_file_sources (
 	path varchar NOT NULL,
 	excel_sheet varchar NULL,
 	csv_separator varchar NULL,
-	CONSTRAINT check_one_column_populated CHECK (((((file_type)::text = 'EXCEL'::text) AND (excel_sheet IS NOT NULL)) OR (((file_type)::text = 'CSV'::text) AND (csv_separator IS NOT NULL)))),
+	CONSTRAINT check_one_column_populated CHECK
+	(
+	    (file_type in ('excel','EXCEL') AND (excel_sheet IS NOT NULL))
+	        OR
+	    (file_type in ('csv','CSV') AND (csv_separator IS NOT NULL))
+	        OR
+        (file_type in ('parquet','PARQUET') AND excel_sheet IS NULL AND csv_separator IS NULL)
+            OR
+        (file_type in ('avro','AVRO') AND excel_sheet IS NULL AND csv_separator IS NULL)
+	),
 	CONSTRAINT tab_file_sources_pk PRIMARY KEY (source_id),
 	CONSTRAINT chk_file_type CHECK (((file_type)::text = ANY ((ARRAY['EXCEL'::character varying, 'PARQUET'::character varying, 'AVRO'::character varying, 'CSV'::character varying,'excel'::character varying, 'parquet'::character varying, 'avro'::character varying, 'csv'::character varying])::text[])))
 );

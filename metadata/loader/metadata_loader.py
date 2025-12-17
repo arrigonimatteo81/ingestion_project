@@ -117,7 +117,7 @@ class ProcessorMetadata(MetadataLoader):
     def get_file_dest_info(self, destination_id: str) -> TabFileDest:
         cur = self.conn.cursor()
         cur.execute(
-            f"SELECT format_file,gcs_path,overwrite,csv_separator FROM public.tab_file_destinations where destination_id ='{destination_id}'")
+            f"SELECT format_file,gcs_path,csv_separator,overwrite FROM public.tab_file_destinations where destination_id ='{destination_id}'")
         row = cur.fetchone()
         return TabFileDest(*row)
 

@@ -22,11 +22,7 @@ class CsvFileDestination(FileDestination):
 
     def write(self, df: DataFrame):
         if self.overwrite:
-            #df.write.csv(path = self.gcs_path,sep=self.separator,header=True, mode="overwrite")
-            df.write.mode("overwrite")\
-            .option("header","true")\
-            .option("separator", self.separator)\
-            .csv(self.gcs_path)
+            df.write.csv(path=self.gcs_path, header=True, sep=self.separator, mode="overwrite")
         else:
             df.write.csv(path=self.gcs_path, sep=self.separator, header=True, mode="append")
 
@@ -37,8 +33,6 @@ class ParquetFileDestination(FileDestination):
 
     def write(self, df: DataFrame):
         if self.overwrite:
-            #df.write.csv(path = self.gcs_path,sep=self.separator,header=True, mode="overwrite")
-            df.write.mode("overwrite")\
-            .parquet(self.gcs_path)
+            df.write.parquet(path=self.gcs_path, mode="overwrite")
         else:
             df.write.parquet(path=self.gcs_path, mode="append")

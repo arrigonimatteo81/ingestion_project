@@ -46,24 +46,28 @@ class ExcelFileSource(FileSource):
 class CsvFileSource(FileSource):
     def __init__(self, gcs_path: str, separator: str):
         FileSource.__init__(self, FileFormat.CSV, gcs_path)
-        self.bucket_name = re.match(r"^gs://([^/]+)(/.*)$", self.gcs_path).group(1)
+        #self.bucket_name = re.match(r"^gs://([^/]+)(/.*)$", self.gcs_path).group(1)
         self.separator = separator
 
     def __repr__(self):
-        return (f"CsvGCSSource(format_file: {self.format_file}, gcs_path: {self.gcs_path}, "
-                f"bucket_name: {self.bucket_name}), separator: {self.separator})")
+        return f"CsvGCSSource(format_file: {self.format_file}, gcs_path: {self.gcs_path}, separator: {self.separator})"
 
     def to_dataframe(self, spark: SparkSession) -> DataFrame:
-        return spark.read.csv(path=f"{self.gcs_path}/*.csv",sep=self.separator, inferSchema=True,header=True)
+        return (spark.read.format("csv")
+                .option("path",self.gcs_path)
+                .option("sep",self.separator)
+                .option("inferSchema",True)
+                .option("header",True)
+                .load())
 
 class ParquetFileSource(FileSource):
     def __init__(self, gcs_path: str):
         FileSource.__init__(self, FileFormat.PARQUET, gcs_path)
-        self.bucket_name = re.match(r"^gs://([^/]+)(/.*)$", self.gcs_path).group(1)
+        #self.bucket_name = re.match(r"^gs://([^/]+)(/.*)$", self.gcs_path).group(1)
 
     def __repr__(self):
-        return (f"ParquetGCSSource(format_file: {self.format_file}, gcs_path: {self.gcs_path}, "
-                f"bucket_name: {self.bucket_name})")
+        return f"ParquetGCSSource(format_file: {self.format_file}, gcs_path: {self.gcs_path}, "
+                #f"bucket_name: {self.bucket_name})")
 
     def to_dataframe(self, spark: SparkSession) -> DataFrame:
-        return spark.read.parquet(f"{self.gcs_path}/*.parquet")
+        return spark.read.format("parquet").option("path",self.gcs_path).load()
