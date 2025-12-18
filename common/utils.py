@@ -193,3 +193,12 @@ def string_to_dict(str_to_convert):
         return json.loads(str_to_convert)
     except Exception as e:
         raise Exception(f"Error converting string {str_to_convert} to dictionary: {str(e)}")
+
+def extract_db_type_from_jdbc_url(jdbc_url:str):
+    """
+
+    :param jdbc_url:
+    :return: the string between 'jdbc:' and the next ':'
+    """
+    pattern = r"jdbc:([^:]+):"
+    return re.search(pattern, jdbc_url).group(1)

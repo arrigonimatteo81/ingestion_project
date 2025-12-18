@@ -6,6 +6,7 @@ from processor.domain import SourceType, FileFormat
 from processor.sources.base import Source
 from processor.sources.file_sources import ExcelFileSource, CsvFileSource, ParquetFileSource
 from processor.sources.jdbc_sources import TableJDBCSource, QueryJDBCSource
+from processor.sources.partitioning import PartitioningConfiguration
 
 logger = get_logger(__name__)
 
@@ -21,7 +22,12 @@ class SourceFactory:
                 if jdbc_source.tablename:
                     return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
                 elif jdbc_source.query_text:
-                    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.query_text)
+                    if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
+                        partitioning_cfg: PartitioningConfiguration = PartitioningConfiguration(expression=jdbc_source.partitioning_expression,num_partitions=jdbc_source.num_partitions)
+                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
+                                               jdbc_source.url, jdbc_source.query_text, partitioning_cfg)
+                    else:
+                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.query_text)
             elif source_type.upper() == SourceType.FILE.value:
                 file_source: TabFileSource = repository.get_file_source_info(source_id)
                 if file_source.file_type.upper() == FileFormat.EXCEL.value:

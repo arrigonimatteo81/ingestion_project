@@ -9,7 +9,7 @@ class TabJDBCSource:
     tablename: str
     query_text: str = None
     partitioning_expression: str = None
-    num_partitions: str = None
+    num_partitions: int = None
 
     def __repr__(self):
         return (f"TabJDBCSource(url={self.url},username={self.username},pwd={self.pwd},driver={self.driver},"

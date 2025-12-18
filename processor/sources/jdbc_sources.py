@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession, DataFrame
 
 from metadata.models.tab_jdbc import JDBCTable, JDBCQuery
-from processor.partitioning import PartitioningConfiguration
+from processor.sources.partitioning import PartitioningConfiguration
 from processor.sources.base import Source
 
 
