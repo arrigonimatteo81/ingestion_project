@@ -7,7 +7,7 @@ CREATE TABLE public.tab_jdbc_destinations (
 	pwd varchar NOT NULL,
 	driver varchar NOT NULL,
 	tablename varchar NOT NULL,
-	overwrite bool
+	overwrite bool,
 	CONSTRAINT tab_jdbc_destinations_pk PRIMARY KEY (destination_id)
 );
 
