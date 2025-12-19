@@ -11,4 +11,4 @@ CREATE TABLE public.tab_task_logs (
 	rows_affected int4 NULL
 );
 
-GRANT SELECT ON table public.tab_task_logs TO utente;
+GRANT SELECT, INSERT, UPDATE ON table public.tab_task_logs TO utente;
