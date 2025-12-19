@@ -1,7 +1,6 @@
-pyspark~=4.0.1
+pyspark~=3.2.4
 psycopg2-binary
-pandas
-google~=3.0.0
+pandas~=2.3.3
 google-cloud-dataproc
 google-cloud-bigquery
 google-cloud-storage
