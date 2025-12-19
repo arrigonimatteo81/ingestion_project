@@ -8,7 +8,7 @@ from common.utils import (
     extract_field_from_file,
     get_log_level_from_file,
     string_to_dict,
-    dict_to_string, get_logger
+    dict_to_string, get_logger, extract_db_type_from_jdbc_url
 )
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -161,3 +161,14 @@ class TestGetLogger(unittest.TestCase):
     def test_log_level_double_package(self):
         result=get_logger(__name__,CONF_PATH)
         self.assertEqual(logging.CRITICAL,result.level)
+
+class TestFunctionExtractDbTypeFromJdbcUrl(unittest.TestCase):
+    def test_function_extract_db_type_from_jdbc_url_extracts_oracle(self):
+        res = extract_db_type_from_jdbc_url("jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=host.miodominio.com)(PORT=port))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME= service_name)))")
+        self.assertEqual(res,"oracle")
+
+    def test_function_extract_from_not_valid_jdbc(self):
+        res = extract_db_type_from_jdbc_url("jdbc_non_valido")
+        self.assertIsNone(res,"oracle")
+
+

@@ -200,5 +200,5 @@ def extract_db_type_from_jdbc_url(jdbc_url:str):
     :param jdbc_url:
     :return: the string between 'jdbc:' and the next ':'
     """
-    pattern = r"jdbc:([^:]+):"
-    return re.search(pattern, jdbc_url).group(1)
+    match = re.search(r"jdbc:([^:]+):", jdbc_url, re.IGNORECASE)
+    return match.group(1) if match else None
