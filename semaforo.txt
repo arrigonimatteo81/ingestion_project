@@ -1,0 +1,9 @@
+jdbc source semaforo
+jdbc dest semaforo su pg
+1) leggo il semaforo sorgente
+2) scrivo il semaforo destinazione
+3) lj tra sem sorgente e sem destinazione per chiave
+4) confrontando gli id tra sorg e dest, utilizzo le righe con id destinazione superiore al sorgente
+e le utilizzo per popolare la tabella tasks.
+la tabella task contiene l'id sorgente (nome della tabella) e, di conseguenza l'id destinazione (nome della tabella)
+contiene anche tutti i campi che arrivano dal semaforo e che devono essere utilizzati per il filtro
