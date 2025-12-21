@@ -1,0 +1,44 @@
+import re
+from abc import ABC, abstractmethod
+
+class Database(ABC):
+
+    def __init__(self, cfg: dict):
+        self.cfg = cfg
+
+    @abstractmethod
+    def connect(self):
+        pass
+    @abstractmethod
+    def execute(self, query: str, params=None):
+        pass
+    @abstractmethod
+    def close(self):
+        pass
+    @abstractmethod
+    def match_url(self):
+        pass
+
+class DbConcrete(Database):
+
+    pattern=""
+
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self.conn = None
+        self.cursor = None
+
+    def match_url(self):
+        match = re.search(self.pattern, self.cfg["url"])
+        return match
+
+    def execute(self, query: str, params=None):
+        self.cursor.execute(query, params or ())
+        return self.cursor.fetchall()
+
+    def close(self):
+        self.cursor.close()
+        self.conn.close()
+
+    def connect(self):
+        pass

@@ -23,7 +23,12 @@ class SourceFactory:
                     return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
                 elif jdbc_source.query_text:
                     if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
-                        partitioning_cfg: PartitioningConfiguration = PartitioningConfiguration(expression=jdbc_source.partitioning_expression,num_partitions=jdbc_source.num_partitions)
+                        partitioning_cfg: PartitioningConfiguration = PartitioningConfiguration(expression=jdbc_source.partitioning_expression,
+                                                                                                num_partitions=jdbc_source.num_partitions,
+                                                                                                username=jdbc_source.username,
+                                                                                                pwd=jdbc_source.pwd,
+                                                                                                url=jdbc_source.url,
+                                                                                                query = jdbc_source.query_text)
                         return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
                                                jdbc_source.url, jdbc_source.query_text, partitioning_cfg)
                     else:
