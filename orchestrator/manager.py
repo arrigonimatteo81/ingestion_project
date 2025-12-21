@@ -41,9 +41,14 @@ class OrchestratorManager:
         else:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
             todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks)
+            #TODO utilizzare il percorso relativo del file almeno fino alla cartella venv
+            venv_python = r"C:\Users\Utente\PyCharmProjects\ingestion_project\venv\Scripts\python.exe"
             for i in todo_list:
                 cmd = [
                      "spark-submit",
+                    #TODO eliminare se non si gira in locale con venv
+                     f"--conf=spark.pyspark.python={venv_python}",
+                     f"--conf=spark.pyspark.driver.python={venv_python}",
                      "--jars", ",".join(i['pyspark_job']['jar_file_uris']),
                      f"{i['pyspark_job']['main_python_file_uri']}",
                      "-r", f"{i['pyspark_job']['args'][1]}",
@@ -52,7 +57,7 @@ class OrchestratorManager:
                      "-b", f"{i['pyspark_job']['args'][7]}"
                  ]
 
-                subprocess.run(cmd, check=True, text=True, shell=False)
+                subprocess.run(cmd, check=True, text=True, shell=True)
 
             return OperationResult(successful=True, description="Tutto ok")
 
