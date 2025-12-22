@@ -1,6 +1,9 @@
 import re
 from abc import ABC, abstractmethod
 
+from common.utils import parse_jdbc_url_string
+
+
 class Database(ABC):
 
     def __init__(self, cfg: dict):
@@ -29,7 +32,7 @@ class DbConcrete(Database):
         self.cursor = None
 
     def match_url(self):
-        match = re.search(self.pattern, self.cfg["url"])
+        match = parse_jdbc_url_string(self.pattern, self.cfg["url"])
         return match
 
     def execute(self, query: str, params=None):

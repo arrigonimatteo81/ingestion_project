@@ -11,7 +11,7 @@ class PostgresDB(DbConcrete):
 
         self.conn = psycopg2.connect(
             host=match.group("host"),
-            port=match.group("port"),
+            port = int(match.group("port")) if match.group("port") is not None else 5432,
             dbname=match.group("db"),
             user=self.cfg["user"],
             password=self.cfg["password"]

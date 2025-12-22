@@ -1,27 +1,24 @@
-import pyodbc
+import pymssql
 from db.database import Database, DbConcrete
 
 
 class SqlServerDB(DbConcrete):
 
-    pattern = (
-        r"^jdbc:sqlserver://"
-        r"(?P<host>[^\\:;]+)"  # host
-        r"(?:\\(?P<instance>[^:;]+))?"  # istanza (opzionale)
-        r"(?::(?P<port>\d+))?"  # porta (opzionale)
-        r".*?databaseName=(?P<db>[^;]+)"
-    )
+    pattern = r"^jdbc:sqlserver://(?P<host>[^\\:;]+)(?:\\(?P<instance>[^:;]+))?(?::(?P<port>\d+))?.*?databaseName=(?P<db>[^;]+)"
 
     def connect(self):
         match = self.match_url()
         server = f"{match.group('host')}\\{match.group('instance')}"
-        conn_str = (
-            "DRIVER={ODBC Driver 17 for SQL Server};"
-            f"SERVER={server};"
-            f"DATABASE={match.group('db')};"
-            f"UID={self.cfg['user']};"
-            f"PWD={self.cfg['password']}"
-        )
-        self.conn = pyodbc.connect(conn_str)
+        self.conn=pymssql.connect(
+                    server=server,
+                    user=self.cfg["user"],
+                    password=self.cfg["password"],
+                    database=match.group("db")
+            )
         self.cursor = self.conn.cursor()
         return self
+
+#with pymssql.connect(server=r"pdbclt076.syssede.systest.sanpaoloimi.com",user=r"SYSSPIMI\SYS_LG_RDB",password="4EfTw@B9UpCriK#epGiM",database="RDBP0_MENS") as db_source:
+#...     with db_source.cursor() as cursor:
+#...             cursor.execute("Select 1")
+#...             cursor.fetchall()

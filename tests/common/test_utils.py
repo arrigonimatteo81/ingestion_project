@@ -8,8 +8,24 @@ from common.utils import (
     extract_field_from_file,
     get_log_level_from_file,
     string_to_dict,
-    dict_to_string, get_logger, extract_db_type_from_jdbc_url
+    dict_to_string, get_logger, extract_db_type_from_jdbc_url, parse_jdbc_url_string
 )
+
+PATTERN_JDBC_URL_ORACLE = r"HOST=(?P<host>[^)]+).*?PORT=(?P<port>\d+).*?(SERVICE_NAME|SID)=(?P<db>[^)]+)"
+
+JDBC_URL_ORACLE = "jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=machine-scan.syssede.systest.sanpaoloimi.com)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=SERVICE_NAME)))"
+
+PATTERN_JDBC_URL_SQLSERVER = r"^jdbc:sqlserver://(?P<host>[^\\:;]+)(?:\\(?P<instance>[^:;]+))?(?::(?P<port>\d+))?.*?databaseName=(?P<db>[^;]+)"
+
+JDBC_URL_SQLSERVER = "jdbc:sqlserver://machine.syssede.systest.sanpaoloimi.com\\instance:1433;databaseName=DATABASE"
+
+PATTERN_JDBC_URL_MYSQL = r"^jdbc:mysql://(?P<host>[^:/]+)(?::(?P<port>\d+))?/(?P<db>[^/?]+)"
+
+JDBC_URL_MYSQL = "jdbc:mysql://machine.syssede.systest.sanpaoloimi.com:3306/mio_database"
+
+PATTERN_JDBC_URL_POSTGRES = r"^jdbc:postgresql://(?P<host>[^:/]+):(?P<port>\d+)/(?P<db>[^/?]+)"
+
+JDBC_URL_POSTGRES = "jdbc:postgresql://machine.syssede.systest.sanpaoloimi.com:5506/dbname"
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 CONF_PATH = f"{test_dir}/resources/application.conf"
@@ -172,3 +188,66 @@ class TestFunctionExtractDbTypeFromJdbcUrl(unittest.TestCase):
         self.assertIsNone(res,"oracle")
 
 
+class TestParseJdbcUrlString(unittest.TestCase):
+    def test_host_by_parse_jdbc_url_string_postgres(self):
+        res = parse_jdbc_url_string(JDBC_URL_POSTGRES, PATTERN_JDBC_URL_POSTGRES)
+        self.assertEqual(res.group("host"),"machine.syssede.systest.sanpaoloimi.com")
+
+    def test_port_by_parse_jdbc_url_string_postgres(self):
+        res = parse_jdbc_url_string(JDBC_URL_POSTGRES, PATTERN_JDBC_URL_POSTGRES)
+        self.assertEqual(res.group("port"),"5506")
+
+    def test_db_by_parse_jdbc_url_string_postgres(self):
+        res = parse_jdbc_url_string(JDBC_URL_POSTGRES, PATTERN_JDBC_URL_POSTGRES)
+        self.assertEqual(res.group("db"),"dbname")
+
+    def test_host_by_parse_jdbc_url_string_mysql(self):
+        res = parse_jdbc_url_string(JDBC_URL_MYSQL, PATTERN_JDBC_URL_MYSQL)
+        self.assertEqual(res.group("host"),"machine.syssede.systest.sanpaoloimi.com")
+
+    def test_port_by_parse_jdbc_url_string_mysql(self):
+        res = parse_jdbc_url_string(JDBC_URL_MYSQL,PATTERN_JDBC_URL_MYSQL)
+        self.assertEqual(res.group("port"),"3306")
+
+    def test_port_is_null_by_parse_jdbc_url_string_mysql(self):
+        res = parse_jdbc_url_string("jdbc:mysql://machine.syssede.systest.sanpaoloimi.com/mio_database",PATTERN_JDBC_URL_MYSQL)
+        self.assertIsNone(res.group("port"))
+
+    def test_db_by_parse_jdbc_url_string_mysql(self):
+        res = parse_jdbc_url_string(JDBC_URL_MYSQL,PATTERN_JDBC_URL_MYSQL)
+        self.assertEqual(res.group("db"),"mio_database")
+
+    def test_host_by_parse_jdbc_url_string_sqlserver(self):
+        res = parse_jdbc_url_string(JDBC_URL_SQLSERVER, PATTERN_JDBC_URL_SQLSERVER)
+        self.assertEqual(f"{res.group('host')}\\{res.group('instance')}","machine.syssede.systest.sanpaoloimi.com\\instance")
+
+    def test_port_by_parse_jdbc_url_string_sqlserver(self):
+        res = parse_jdbc_url_string(JDBC_URL_SQLSERVER, PATTERN_JDBC_URL_SQLSERVER)
+        self.assertEqual(res.group("port"),"1433")
+
+    def test_db_by_parse_jdbc_url_string_sqlserver(self):
+        res = parse_jdbc_url_string(
+            JDBC_URL_SQLSERVER, PATTERN_JDBC_URL_SQLSERVER)
+        self.assertEqual(res.group("db"),"DATABASE")
+
+    def test_host_by_parse_jdbc_url_string_oracle(self):
+        res = parse_jdbc_url_string(JDBC_URL_ORACLE,
+                                    PATTERN_JDBC_URL_ORACLE)
+        self.assertEqual(res.group('host'),"machine-scan.syssede.systest.sanpaoloimi.com")
+
+    def test_port_by_parse_jdbc_url_string_oracle(self):
+        res = parse_jdbc_url_string(JDBC_URL_ORACLE,
+                                    PATTERN_JDBC_URL_ORACLE)
+        self.assertEqual(res.group('port'),"1521")
+
+    def test_db_by_parse_jdbc_url_string_oracle(self):
+        res = parse_jdbc_url_string(
+            JDBC_URL_ORACLE,
+            PATTERN_JDBC_URL_ORACLE)
+        self.assertEqual(res.group('db'), "SERVICE_NAME")
+
+    def test_sid_by_parse_jdbc_url_string_oracle(self):
+        res = parse_jdbc_url_string(
+            "jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=machine-scan.syssede.systest.sanpaoloimi.com)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SID=SERVICE_NAME)))",
+            PATTERN_JDBC_URL_ORACLE)
+        self.assertEqual(res.group('db'), "SERVICE_NAME")

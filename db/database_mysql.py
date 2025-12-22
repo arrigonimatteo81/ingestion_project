@@ -16,7 +16,7 @@ class MySqlDB(DbConcrete):
 
             self.conn = mysql.connector.connect(
                 host=match.group("host"),
-                port=match.group("port"), #3306),
+                port = int(match.group("port")) if match.group("port") is not None else 3306,
                 database=match.group("db"),
                 user=self.cfg["user"],
                 password=self.cfg["password"],

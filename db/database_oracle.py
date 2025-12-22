@@ -1,9 +1,13 @@
 import cx_Oracle
-from db.database import Database
+from db.database import DbConcrete
 
-class OracleDB(Database):
+
+class OracleDB(DbConcrete):
+
+    pattern = r"HOST=(?P<host>[^)]+).*?PORT=(?P<port>\d+).*?(SERVICE_NAME|SID)=(?P<db>[^)]+)"
 
     def connect(self):
+        match = self.match_url()
         self.conn = cx_Oracle.connect(
             user=self.cfg["user"],
             password=self.cfg["password"],
@@ -11,11 +15,3 @@ class OracleDB(Database):
         )
         self.cursor = self.conn.cursor()
         return self
-
-    def execute(self, query: str, params=None):
-        self.cursor.execute(query, params or {})
-        return self.cursor.fetchall()
-
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
