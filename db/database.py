@@ -18,9 +18,6 @@ class Database(ABC):
     @abstractmethod
     def close(self):
         pass
-    @abstractmethod
-    def match_url(self):
-        pass
 
 class DbConcrete(Database):
 
@@ -32,7 +29,7 @@ class DbConcrete(Database):
         self.cursor = None
 
     def match_url(self):
-        match = parse_jdbc_url_string(self.pattern, self.cfg["url"])
+        match = parse_jdbc_url_string(self.cfg["url"],self.pattern)
         return match
 
     def execute(self, query: str, params=None):

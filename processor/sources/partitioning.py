@@ -1,10 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from db.database_factory import DatabaseFactory
 
 MAX_ALLOWED_PARTITIONS = 300
 
-
+@dataclass
 class PartitioningConfiguration:
     """
     Configuration for data partitioning.
@@ -13,22 +13,22 @@ class PartitioningConfiguration:
         expression (str): The expression used for partitioning. It can also be the name of an existing column. In both cases, only integer expressions are allower
         num_partitions (int): The number of partitions to create.
     """
-    def __init__(self, expression: str, num_partitions: int, username: str, pwd: str, url: str, query: str):
-        self.expression = expression
-        self.num_partitions = num_partitions
-        self.username = username
-        self.pwd = pwd
-        self.url = url
-        self.query = query
-        self._min: int
-        self._max: int
+    expression: str
+    num_partitions: int
+    username: str
+    pwd: str
+    url: str
+    query: str
+
+    _min: int = field(init=False)
+    _max: int = field(init=False)
 
     @property
-    def min(self):
+    def min_value(self):
         return self._min
 
     @property
-    def max(self):
+    def max_value(self):
         return self._max
 
     def __post_init__(self):
@@ -54,7 +54,7 @@ class PartitioningConfiguration:
             )
 
         _db = DatabaseFactory.get_db({"user": self.username, "password": self.pwd, "url": self.url})
-        res = _db.execute(f"Select min{self.expression}, max{self.expression} from ({self.query})")
+        res = _db.execute(f"Select min({self.expression}), max({self.expression}) from ({self.query})")
         self._min = res(0)
         self._max = res(1)
 

@@ -14,165 +14,32 @@ def read(self):
 
  source .venv/bin/activate
  python3 main_orchestrator.py -r 20251217_153500 -g TEST_GROUP_2 -c application.conf
+--------------------------------------
+class PartitioningConfiguration:
+    expression: str
+    num_partitions: int
+    min_value: int
+    max_value: int
 
-----classe base astratta-----------------------------------------------
-from abc import ABC, abstractmethod
+----------------------------------------
+class PartitionBoundsResolver:
 
-class Database(ABC):
+    def resolve(self, expression: str, query: str, db) -> tuple[int, int]:
+        sql = f"""
+        SELECT MIN({expression}), MAX({expression})
+        FROM ({query}) t
+        """
+        return db.execute(sql)[0]
+---------------------------------------
+class PartitioningConfigurationFactory:
 
-    def __init__(self, cfg: dict):
-        self.cfg = cfg
-
-    @abstractmethod
-    def connect(self):
-        pass
-
-    @abstractmethod
-    def execute(self, query: str, params=None):
-        pass
-
-    @abstractmethod
-    def close(self):
-        pass
----------------------------------------------------
-Oracle (cx_Oracle) – db/oracle.py
----------------------------------------------------
-import cx_Oracle
-from db.base import Database
-
-class OracleDB(Database):
-
-    def connect(self):
-        self.conn = cx_Oracle.connect(
-            user=self.cfg["user"],
-            password=self.cfg["password"],
-            dsn=self.cfg["dsn"]
+    def create(self, expression, num_partitions, query, db):
+        min_v, max_v = PartitionBoundsResolver().resolve(
+            expression, query, db
         )
-        self.cursor = self.conn.cursor()
-        return self
-
-    def execute(self, query: str, params=None):
-        self.cursor.execute(query, params or {})
-        return self.cursor.fetchall()
-
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
---------------------------------------------------
-PostgreSQL (psycopg2) – db/postgres.py
---------------------------------------------------
-import psycopg2
-from db.base import Database
-
-class PostgresDB(Database):
-
-    def connect(self):
-        self.conn = psycopg2.connect(
-            host=self.cfg["host"],
-            port=self.cfg.get("port", 5432),
-            dbname=self.cfg["database"],
-            user=self.cfg["user"],
-            password=self.cfg["password"]
+        return PartitioningConfiguration(
+            expression=expression,
+            num_partitions=num_partitions,
+            min_value=min_v,
+            max_value=max_v
         )
-        self.cursor = self.conn.cursor()
-        return self
-
-    def execute(self, query: str, params=None):
-        self.cursor.execute(query, params)
-        return self.cursor.fetchall()
-
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
---------------------------------------------------
-SQL Server (pyodbc) – db/sqlserver.py
---------------------------------------------------
-import pyodbc
-from db.base import Database
-
-class SqlServerDB(Database):
-
-    def connect(self):
-        conn_str = (
-            "DRIVER={ODBC Driver 17 for SQL Server};"
-            f"SERVER={self.cfg['host']};"
-            f"DATABASE={self.cfg['database']};"
-            f"UID={self.cfg['user']};"
-            f"PWD={self.cfg['password']}"
-        )
-        self.conn = pyodbc.connect(conn_str)
-        self.cursor = self.conn.cursor()
-        return self
-
-    def execute(self, query: str, params=None):
-        self.cursor.execute(query, params or [])
-        return self.cursor.fetchall()
-
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
-
---------------------------------------------------
-MySql (mysql-connector-python) – db/mysql.py
---------------------------------------------------
-import mysql.connector
-from mysql.connector import Error
-from db.base import Database
-
-
-class MySqlDB(Database):
-
-    def connect(self):
-        try:
-            self.conn = mysql.connector.connect(
-                host=self.cfg["host"],
-                port=self.cfg.get("port", 3306),
-                database=self.cfg["database"],
-                user=self.cfg["user"],
-                password=self.cfg["password"],
-                autocommit=False
-            )
-            self.cursor = self.conn.cursor()
-            return self
-        except Error as e:
-            raise RuntimeError(f"MySQL connection error: {e}")
-
-    def execute(self, query: str, params=None):
-        self.cursor.execute(query, params or ())
-        return self.cursor.fetchall()
-
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
--------------------------------------------
-Factory + import dinamico (db/factory.py)
--------------------------------------------
-import importlib
-
-DB_CLASSES = {
-    "oracle": "db.oracle.OracleDB",
-    "postgres": "db.postgres.PostgresDB",
-    "sqlserver": "db.sqlserver.SqlServerDB",
-    "mysql": "db.mysql.MySqlDB",
-}
-
-def get_db(cfg: dict):
-    db_type = cfg["db_type"]
-
-    class_path = DB_CLASSES[db_type]
-    module_name, class_name = class_path.rsplit(".", 1)
-
-    module = importlib.import_module(module_name)
-    db_class = getattr(module, class_name)
-
-    return db_class(cfg)
-
------Uso nel codice (DB-agnostic 🎯)---------------------
-from db.factory import get_db
-
-db = get_db(cfg).connect()
-
-rows = db.execute("SELECT * FROM users WHERE id = %s", (1,))
-print(rows)
-
-db.close()

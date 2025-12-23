@@ -6,6 +6,7 @@ class PostgresDB(DbConcrete):
 
     pattern = r"^jdbc:postgresql://(?P<host>[^:/]+):(?P<port>\d+)/(?P<db>[^/?]+)"
 
+
     def connect(self):
         match = self.match_url()
 

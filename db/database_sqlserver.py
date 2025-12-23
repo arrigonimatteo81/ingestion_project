@@ -10,7 +10,7 @@ class SqlServerDB(DbConcrete):
         match = self.match_url()
         server = f"{match.group('host')}\\{match.group('instance')}"
         self.conn=pymssql.connect(
-                    server=server,
+                    server=match.group('host'),
                     user=self.cfg["user"],
                     password=self.cfg["password"],
                     database=match.group("db")
