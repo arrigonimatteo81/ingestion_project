@@ -1,8 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from common.const import MAX_ALLOWED_PARTITIONS
 
-from db.database_factory import DatabaseFactory
-
-MAX_ALLOWED_PARTITIONS = 300
 
 @dataclass
 class PartitioningConfiguration:
@@ -15,21 +13,8 @@ class PartitioningConfiguration:
     """
     expression: str
     num_partitions: int
-    username: str
-    pwd: str
-    url: str
-    query: str
-
-    _min: int = field(init=False)
-    _max: int = field(init=False)
-
-    @property
-    def min_value(self):
-        return self._min
-
-    @property
-    def max_value(self):
-        return self._max
+    min_value: int
+    max_value: int
 
     def __post_init__(self):
         """
@@ -52,9 +37,4 @@ class PartitioningConfiguration:
             raise ValueError(
                 f"num_partitions must be a positive integer not bigger than {MAX_ALLOWED_PARTITIONS}"
             )
-
-        _db = DatabaseFactory.get_db({"user": self.username, "password": self.pwd, "url": self.url})
-        res = _db.execute(f"Select min({self.expression}), max({self.expression}) from ({self.query})")
-        self._min = res(0)
-        self._max = res(1)
 

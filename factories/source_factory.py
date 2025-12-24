@@ -1,4 +1,7 @@
+from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.utils import extract_field_from_file, get_logger
+from factories.database_factory import DatabaseFactory
+from factories.partition_configuration_factory import PartitioningConfigurationFactory
 from metadata.loader.metadata_loader import ProcessorMetadata
 from metadata.models.tab_file import TabFileSource
 from metadata.models.tab_jdbc import TabJDBCSource
@@ -11,9 +14,12 @@ from processor.sources.partitioning import PartitioningConfiguration
 logger = get_logger(__name__)
 
 
+
 class SourceFactory:
+
     @staticmethod
-    def create_source(source_type: str, source_id: str, config_file: str) -> Source:
+    def create_source(source_type: str, source_id: str, config_file: str):
+
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(connection_string)
         try:
@@ -23,16 +29,18 @@ class SourceFactory:
                     return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
                 elif jdbc_source.query_text:
                     if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
-                        partitioning_cfg: PartitioningConfiguration = PartitioningConfiguration(expression=jdbc_source.partitioning_expression,
-                                                                                                num_partitions=jdbc_source.num_partitions,
-                                                                                                username=jdbc_source.username,
-                                                                                                pwd=jdbc_source.pwd,
-                                                                                                url=jdbc_source.url,
-                                                                                                query = jdbc_source.query_text)
+                        query_transformed: str= (f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} "
+                                                 f"from ({jdbc_source.query_text})) as subquery")
+                        db_factory: DatabaseFactory = DatabaseFactory({"user": jdbc_source.username, "password": jdbc_source.pwd, "url": jdbc_source.url})
+                        pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
+                        partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(NAME_OF_PARTITIONING_COLUMN,
+                                                                                                                   jdbc_source.num_partitions,
+                                                                                                                   query_transformed)
                         return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
-                                               jdbc_source.url, jdbc_source.query_text, partitioning_cfg)
+                                               jdbc_source.url, query_transformed, partitioning_cfg)
                     else:
-                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.query_text)
+                        query_transformed: str = f"({jdbc_source.query_text}) as subquery"
+                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, query_transformed)
             elif source_type.upper() == SourceType.FILE.value:
                 file_source: TabFileSource = repository.get_file_source_info(source_id)
                 if file_source.file_type.upper() == FileFormat.EXCEL.value:

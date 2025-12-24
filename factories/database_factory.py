@@ -10,18 +10,20 @@ logger = get_logger(__name__)
 
 class DatabaseFactory:
 
-    @staticmethod
-    def get_db(cfg: dict):
-        db_type = extract_db_type_from_jdbc_url(cfg["url"])
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    def get_db(self):
+        db_type = extract_db_type_from_jdbc_url(self.cfg["url"])
         try:
             #if db_type.upper() == "ORACLE":
             #    return OracleDB(cfg)
             if db_type.upper() == "POSTGRESQL":
-                return PostgresDB(cfg)
+                return PostgresDB(self.cfg)
             #elif db_type.upper() == "MYSQL":
             #    return MySqlDB(cfg)
             elif db_type.upper() == "SQLSERVER":
-                return SqlServerDB(cfg)
+                return SqlServerDB(self.cfg)
             else:
                 logger.error("Unsupported db type!!!")
                 raise ValueError(f"Unsupported db type: {db_type.upper()}")
