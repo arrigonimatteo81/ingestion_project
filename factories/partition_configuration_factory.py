@@ -1,5 +1,5 @@
 from factories.database_factory import DatabaseFactory
-from helper.partition_bounds_resolver import PartitionBoundsResolver
+from helpers.partition_bounds_resolver import PartitionBoundsResolver
 from processor.sources.partitioning import PartitioningConfiguration
 
 
