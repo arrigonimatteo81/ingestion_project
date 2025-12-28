@@ -13,33 +13,7 @@ def read(self):
     return self.spark.createDataFrame(pdf)
 
  source .venv/bin/activate
- python3 main_orchestrator.py -r 20251217_153500 -g TEST_GROUP_2 -c application.conf
---------------------------------------
-class PartitioningConfiguration:
-    expression: str
-    num_partitions: int
-    min_value: int
-    max_value: int
+ python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
 
-----------------------------------------
-class PartitionBoundsResolver:
 
-    def resolve(self, expression: str, query: str, db) -> tuple[int, int]:
-        sql = f"""
-        SELECT MIN({expression}), MAX({expression})
-        FROM ({query}) t
-        """
-        return db.execute(sql)[0]
----------------------------------------
-class PartitioningConfigurationFactory:
-
-    def create(self, expression, num_partitions, query, db):
-        min_v, max_v = PartitionBoundsResolver().resolve(
-            expression, query, db
-        )
-        return PartitioningConfiguration(
-            expression=expression,
-            num_partitions=num_partitions,
-            min_value=min_v,
-            max_value=max_v
-        )
+spark.read.jdbc(url="jdbc:sqlserver://pdbclt076.syssede.systest.sanpaoloimi.com\\SYD202:1433;DatabaseName=RDBP0_MENS;encrypt=true;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NTLM;",table="(select top 1000 * from READVC where banca=3385) as subquery",properties={"user": "SYS_LG_RDB@SYSSPIMI","password": "4EfTw@B9UpCriK#epGiM","driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"})

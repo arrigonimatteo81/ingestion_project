@@ -1,3 +1,5 @@
+import logging
+
 from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.utils import extract_field_from_file, get_logger
 from factories.database_factory import DatabaseFactory
@@ -29,18 +31,18 @@ class SourceFactory:
                     return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
                 elif jdbc_source.query_text:
                     if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
-                        query_transformed: str= (f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} "
-                                                 f"from ({jdbc_source.query_text})) as subquery")
+
                         db_factory: DatabaseFactory = DatabaseFactory({"user": jdbc_source.username, "password": jdbc_source.pwd, "url": jdbc_source.url})
                         pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
-                        partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(NAME_OF_PARTITIONING_COLUMN,
+                        partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(jdbc_source.partitioning_expression,
                                                                                                                    jdbc_source.num_partitions,
-                                                                                                                   query_transformed)
+                                                                                                                   jdbc_source.query_text)
                         return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
-                                               jdbc_source.url, query_transformed, partitioning_cfg)
+                                               jdbc_source.url,(f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} "
+                                                 f"from ({jdbc_source.query_text}) tab ) as subquery"), partitioning_cfg)
                     else:
-                        query_transformed: str = f"({jdbc_source.query_text}) as subquery"
-                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, query_transformed)
+                        query_transformed_per_spark: str = f"({jdbc_source.query_text}) as subquery"
+                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, query_transformed_per_spark)
             elif source_type.upper() == SourceType.FILE.value:
                 file_source: TabFileSource = repository.get_file_source_info(source_id)
                 if file_source.file_type.upper() == FileFormat.EXCEL.value:

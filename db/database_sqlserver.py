@@ -11,12 +11,15 @@ class SqlServerDB(DbConcrete):
         server = f"{match.group('host')}\\{match.group('instance')}"
         self.conn=pymssql.connect(
                     server=match.group('host'),
-                    user=self.cfg["user"],
+                    user=self._switch_user_components(),
                     password=self.cfg["password"],
                     database=match.group("db")
             )
         self.cursor = self.conn.cursor()
         return self
+
+    def _switch_user_components(self):
+        return f"{self.cfg['user'].split('@')[1]}\\{self.cfg['user'].split('@')[0]}"
 
 #with pymssql.connect(server=r"pdbclt076.syssede.systest.sanpaoloimi.com",user=r"SYSSPIMI\SYS_LG_RDB",password="4EfTw@B9UpCriK#epGiM",database="RDBP0_MENS") as db_source:
 #...     with db_source.cursor() as cursor:

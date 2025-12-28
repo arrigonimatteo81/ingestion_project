@@ -41,6 +41,12 @@ class TestDatabaseFactory(unittest.TestCase):
         match=res.match_url()
         self.assertEqual(match.group("host"), "machine.syssede.systest.sanpaoloimi.com")
 
+    def test_user_component_sqlserver(self):
+        url_dict={"user":"user@domain", "password":"password", "url": "jdbc:sqlserver://machine.syssede.systest.sanpaoloimi.com\\INSTANCE:1433;DatabaseName=RDBP0_MENS;encrypt=true;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NTLM;"}
+        dbf = DatabaseFactory(url_dict)
+        res = dbf.get_db()
+        self.assertEqual(res._switch_user_components(), "domain\\user")
+
 
     def test_url_instance_component_sqlserver(self):
         url_dict={"user":"user", "password":"password", "url": "jdbc:sqlserver://machine.syssede.systest.sanpaoloimi.com\\INSTANCE:1433;DatabaseName=dbname;encrypt=true;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NTLM;"}
