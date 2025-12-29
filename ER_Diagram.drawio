@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="29.2.9">
   <diagram name="ER_Diagram" id="0">
-    <mxGraphModel dx="1778" dy="723" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="2556" dy="1315" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -108,7 +108,7 @@
           <mxGeometry height="20" width="20" x="640" y="740" as="geometry" />
         </mxCell>
         <mxCell id="Eo4jnEnb8if7Nie3sSzK-18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=0;" value="Tasks da semaforo&lt;br&gt;ID (PK) id di confronto tra semaforo vecchio e nuovo&lt;div&gt;SOURCE_ID (FK) READVC&lt;/div&gt;&lt;div&gt;DESTINATION_ID(FK) READVC_STG&amp;nbsp;&lt;br&gt;BANCA&lt;/div&gt;&lt;div&gt;PROVENIENZA&lt;br&gt;CONFIG_PROFILE (FK) é dato da tabella+banca+prov(la spark submit é guidata da queste chiavi)&lt;br&gt;&lt;/div&gt;&lt;div&gt;tutte le colonne aggiuntive (periodo, nome della colonna valore in base al periodo, ambito).&lt;/div&gt;" vertex="1">
-          <mxGeometry height="150" width="410" x="560" y="1100" as="geometry" />
+          <mxGeometry height="150" width="410" x="530" y="1220" as="geometry" />
         </mxCell>
         <mxCell id="Eo4jnEnb8if7Nie3sSzK-19" parent="1" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.cloud_callout" value="Questa tabella dovrà sostituire l&#39;attuale task" vertex="1">
           <mxGeometry height="110" width="180" x="980" y="1110" as="geometry" />

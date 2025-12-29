@@ -58,6 +58,7 @@ class OrchestratorManager:
                  ]
 
                 subprocess.run(cmd, check=True, text=True, shell=False)
+                #subprocess.run(cmd, check=True, text=True, shell=True)
 
             return OperationResult(successful=True, description="Tutto ok")
 

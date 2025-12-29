@@ -1,230 +1,31 @@
-jdbc source semaforo
-jdbc dest semaforo su pg
-1) leggo il semaforo sorgente (con la max attuale)
-2) scrivo il semaforo destinazione
-3) lj tra sem sorgente e sem destinazione per chiave
-4) confrontando gli id tra sorg e dest, utilizzo le righe con id destinazione superiore al sorgente
-e le utilizzo per popolare la tabella tasks.
-la tabella task contiene l'id sorgente (nome della tabella) e, di conseguenza l'id destinazione (nome della tabella)
-contiene anche tutti i campi che arrivano dal semaforo e che devono essere utilizzati per il filtro
+1) task jdbc 2 jdbc (gruppo "SEMAFORO") per portarmi su postgres il semaforo sqlserver: "public.semaforo_mensile"
+    Attenzione, la tabella deve andare in overwrite, non in append in modo che venga semppre sovrascritta
 
-orchestrator/
-├── orchestrator.py
-├── resolver.py
-├── executor.py
-├── models.py
-├── source_db.py      # SQL Server
-├── registry_db.py    # PostgreSQL
-├── enums.py
+2) la vista che esegue il seguente sql:
+---------------------------------------
+select
+coalesce(rm.id,0) id_reg, sm.id id_sem,
+sm.cod_abi as cod_abi,
+sm.tabella as tabella,
+sm.provenienza as provenienza,
+sm.periodo_rif,
+coalesce(rm.tipo_caricamento, sm.tipo_caricamento) as tipo_caricamento,
+coalesce(rm.colonna_valore, sm.colonna_valore) as colonna_valore,
+coalesce(rm.ambito, sm.ambito) as ambito,
+coalesce(rm.max_datava, 20000101000000) as max_datava
+from public.semaforo_mensile sm
+left join public.registro_mensile rm
+on sm.cod_abi = rm.cod_abi
+and sm.tabella = rm.tabella
+and sm.provenienza = rm.provenienza
+where sm.id>coalesce(rm.id,0)
+---------------------------------------
+ritorna giá le righe che devono essere lette dall'orchestrator... conviene comunque fare una insert in overwrite
+nella tab_tasks ed utilizzare quella
 
-
-Orchestrator
- ├── SemaforoRepository (SQL Server)
- │     └── SqlServerDB
- └── RegistryRepository (Postgres)
-       └── PostgresDB
---------------------------------------------------
-class SemaforoRepository:
-
-    def __init__(self, db):
-        self.db = db # db è istanza di SqlServerDB
-
-    def fetch(self) -> list[dict]:
-        sql = """
-        SELECT
-            id,
-            business_key,
-            progressivo,
-            source
-        FROM semaforo
-        """
-        self.db.cursor.execute(sql)
-        rows = self.db.cursor.fetchall()
-
-        return [
-            {
-                "id": r[0],
-                "business_key": r[1],
-                "progressivo": r[2],
-                "source": r[3],
-            }
-            for r in rows
-        ]
-
---------------------------------------------------
-from enums import JobStatus
-
-
-class RegistryRepository:
-
-    def __init__(self, db):
-        self.db = db # db è istanza di  PostgresDB
-
-    def fetch_all(self) -> list[dict]:
-        sql = """
-        SELECT
-            source,
-            business_key,
-            last_progressivo,
-            status,
-            retry_count
-        FROM job_registry
-        """
-        self.db.cursor.execute(sql)
-        rows = self.db.cursor.fetchall()
-
-        return [
-            {
-                "source": r[0],
-                "business_key": r[1],
-                "last_progressivo": r[2],
-                "status": r[3],
-                "retry_count": r[4],
-            }
-            for r in rows
-        ]
-
-    def acquire(self, job) -> bool:
-        sql = """
-        INSERT INTO job_registry (
-            source, business_key, last_progressivo, status, retry_count
-        )
-        VALUES (%s, %s, %s, 'RUNNING', 0)
-        ON CONFLICT (source, business_key)
-        DO UPDATE
-        SET status = 'RUNNING'
-        WHERE job_registry.status IN ('FAILED', 'PENDING')
-        """
-        self.db.cursor.execute(
-            sql,
-            (job.source, job.business_key, job.progressivo)
-        )
-
-        acquired = self.db.cursor.rowcount == 1
-        if acquired:
-            self.db.conn.commit()
-        else:
-            self.db.conn.rollback()
-
-        return acquired
-
-    def update_result(self, job, result):
-        sql = """
-        UPDATE job_registry
-        SET
-            status = %s,
-            last_progressivo = %s,
-            retry_count = retry_count + %s,
-            updated_at = now()
-        WHERE source = %s
-          AND business_key = %s
-        """
-        retry_inc = 1 if result.status == JobStatus.FAILED else 0
-
-        self.db.cursor.execute(
-            sql,
-            (
-                result.status.value,
-                job.progressivo,
-                retry_inc,
-                job.source,
-                job.business_key
-            )
-        )
-        self.db.conn.commit()
-
---------------------resolver.py------------------------------
-from models import Job
-from enums import JobStatus
-
-
-class JobResolver:
-
-    def resolve(self, semaforo_rows, registry_rows):
-        registry = {
-            (r["source"], r["business_key"]): r["last_progressivo"]
-            for r in registry_rows
-        }
-
-        jobs = []
-
-        for row in semaforo_rows:
-            key = (row["source"], row["business_key"])
-            last_prog = registry.get(key, -1)
-
-            if row["progressivo"] > last_prog:
-                jobs.append(row)
-
-        return jobs
-----------orhestrator.py----------------------
-from source_db import SqlServerClient
-from registry_db import PostgresRegistry
-from resolver import JobResolver
-from executor import Executor
-from enums import JobStatus
-
-
-class Orchestrator:class Orchestrator:
-
-    def __init__(self, semaforo_repo, registry_repo, executor):
-        self.semaforo_repo = semaforo_repo
-        self.registry_repo = registry_repo
-        self.executor = executor
-
-    def run(self):
-        semaforo = self.semaforo_repo.fetch()
-        registry = self.registry_repo.fetch_all()
-
-        jobs = self.resolver.resolve(semaforo, registry)
-
-        for job in jobs:
-            if not self.registry_repo.acquire(job):
-                continue
-
-            result = self.executor.run(job)
-            self.registry_repo.update_result(job, result)
-
-------------------
-Come implementare acquire_job (idea chiave)
-
-In Postgres:
-
-unique constraint su (source, business_key)
-
-insert atomico
-
-oppure UPDATE ... WHERE status IN ('PENDING','FAILED')
-
-Esempio concettuale SQL:
-
-INSERT INTO registro (source, business_key, status)
-VALUES (%s, %s, 'RUNNING')
-ON CONFLICT (source, business_key)
-DO NOTHING;
-
-
------------------------
-aggiungere alla tabella sources una riga per specificare i parametri di lettura del semaforo
-L'orchestrator riceve già un repository(quello di postgres)... posso usare questo repository per farmi tornare
-i parametri di lettura del semaforo (tabella sources) e poi istanziare il nuovo SourceRepository con i valori letti dalla
-jdbc sources
-Orchestrator
- └── SourceRepository
-       ├── legge config da Postgres
-       └── apre SqlServerDB
-
-
- class SourceRepository:
-
-    def __init__(self, registry_db):
-        self.registry_db = registry_db
-
-    def get_semaforo(self, source_id):
-        cfg = self.registry_db.get_source_cfg(source_id)
-
-        with SqlServerDB(cfg).connect() as db:
-            return self._fetch_semaforo(db)
-
-    def _fetch_semaforo(self, db):
-        ...
+Al momento del lancio, l'orchestrator inserisce in append nella registro le righe della vista? Non mi sembra la soluzione
+migliore, perché se qualcosa va storto, quella riga rimane dentro nella registro.
+Conviene che le righe nella registro vengano inserite/aggiornate (ognuna per la sua riga di competenza)
+alla fine dell'orchestrator solo se tutto é andato bene... la max_datava va presa dalla tabella di
+staging perché è dovrebbe essere più veloce (considerando che il target dovrebbe essere BigQuery)
 

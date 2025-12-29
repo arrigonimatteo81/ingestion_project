@@ -1,0 +1,86 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="29.2.9">
+  <diagram name="ER_Diagram" id="0">
+    <mxGraphModel dx="2290" dy="1112" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Configurations&#xa;CONFIG_NAME (PK)&#xa;CONFIG_VALUE" vertex="1">
+          <mxGeometry height="100" width="160" x="1310" y="239" as="geometry" />
+        </mxCell>
+        <mxCell id="5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Task Configurations&lt;br&gt;COD_ABI (PK)&lt;div&gt;COD_TABELLA (PK)&lt;/div&gt;&lt;div&gt;COD_PROVENIENZA (PK)&lt;br&gt;DESCRIPTION&lt;br&gt;MAIN_PYTHON_FILE&lt;div&gt;&lt;div&gt;ADDITIONAL_PYTHON_FILE_URIS&amp;nbsp;&lt;/div&gt;&lt;div&gt;JAR_FILE_URIS&amp;nbsp;&lt;/div&gt;&lt;div&gt;ADDITIONAL_FILE_URIS&amp;nbsp;&lt;/div&gt;&lt;div&gt;ARCHIVE_FILE_URIS&amp;nbsp;&lt;/div&gt;&lt;div&gt;LOGGING_CONFIG&amp;nbsp;&lt;/div&gt;&lt;div&gt;DATAPROC_PROPERTIES&amp;nbsp;&lt;/div&gt;&lt;div&gt;ASYNC_SUBMIT&lt;/div&gt;&lt;/div&gt;&lt;div&gt;IS_BLOCKING&lt;/div&gt;&lt;div&gt;PROCESSOR_TYPE&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="310" width="210" x="1130" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Task Logs&#xa;TASK_ID (FK)&#xa;RUN_ID&#xa;STATE_ID (FK)&#xa;DESCRIPTION&#xa;ERROR_MESSAGE&#xa;UPDATE_TS (PK)" vertex="1">
+          <mxGeometry height="120" width="200" x="1090" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Task Sources&lt;br&gt;ID (PK)&lt;br&gt;SOURCE_ID (FK)&lt;div&gt;TYPE_OF_SOURCE (BigQuery, JDBC, File)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="200" x="510" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-20" edge="1" parent="1" source="14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="13" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="260" y="1520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=center;overflow=fill;shadow=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Task JDBC Source&lt;br&gt;SOURCE_ID (PK)(FK)&lt;div&gt;-- TRANSFORMATION_ID (PK)(FK)&lt;br&gt;&lt;div&gt;url&lt;/div&gt;&lt;div&gt;username&lt;/div&gt;&lt;div&gt;pwd&lt;/div&gt;&lt;div&gt;driver&lt;/div&gt;&lt;div&gt;tablename&lt;/div&gt;&lt;div&gt;query_text&lt;/div&gt;&lt;div&gt;partitioning_expression&lt;/div&gt;&lt;div&gt;num_partitions&lt;/div&gt;&lt;div&gt;--DELTA&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="200" width="240" x="-160" y="1160" as="geometry" />
+        </mxCell>
+        <mxCell id="15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Task BigQuery Source&lt;br&gt;SOURCE_ID (PK)(FK)&lt;div&gt;TRANSFORMATION_ID (PK)(FK)&lt;br&gt;PROJECT&lt;br&gt;DATASET&lt;br&gt;TABLENAME&lt;/div&gt;&lt;div&gt;QUERY_TEXT&lt;/div&gt;&lt;div&gt;DELTA&lt;/div&gt;" vertex="1">
+          <mxGeometry height="130" width="240" x="-170" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-29" edge="1" parent="1" source="17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="BCElcVMSOxZm8mQbk7RO-28" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Task Destinations JDBC&lt;br&gt;DESTINATION_ID (PK)(FK)&lt;br&gt;HOST&lt;br&gt;PORT&lt;br&gt;USERNAME&lt;br&gt;PWD&lt;br&gt;DRIVER" vertex="1">
+          <mxGeometry height="100" width="240" x="-90" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Task Destinations BigQuery&#xa;TASK_DESTINATION_ID (FK)&#xa;PROJECT&#xa;DATASET&#xa;TABLENAME" vertex="1">
+          <mxGeometry height="100" width="240" x="280" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="VmJAwnhsoO-yE_ZFEKMs-24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Task Group (potrebbe non servire più?)&lt;div&gt;&lt;div&gt;Task_id&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Group_name&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;PRIMARY KEY (TASK_ID, group_name)&lt;/span&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="280" x="1380" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-22" edge="1" parent="1" source="a9jy2lPjzicp8ZfW5LgT-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" target="13" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="260" y="1305" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a9jy2lPjzicp8ZfW5LgT-18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=center;overflow=fill;shadow=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Task GCS Source&lt;br&gt;SOURCE_ID (PK)(FK)&lt;div&gt;--TRANSFORMATION_ID (PK)(FK)&lt;br&gt;FILE_TYPE&lt;br&gt;GCS_PATH&lt;br&gt;EXCEL_SHEET&lt;/div&gt;&lt;div&gt;CSV_SEPARATOR&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="240" x="-170" y="989" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-27" edge="1" parent="1" source="HFcB3WqRsfVhyDGkeuYH-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="BCElcVMSOxZm8mQbk7RO-26" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="HFcB3WqRsfVhyDGkeuYH-18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Task Destinations GCS&lt;br&gt;TASK_DESTINATION_ID (FK)&lt;br&gt;FORMAT_FILE&lt;br&gt;GCS_PATH&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="61" width="240" x="-80" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="HFcB3WqRsfVhyDGkeuYH-22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Task Destinations MAIL&lt;br&gt;TASK_DESTINATION_ID (FK)&lt;br&gt;TO&lt;br&gt;CC&lt;br&gt;BCC&lt;br&gt;SUBJECT&lt;br&gt;HTML_BODY" vertex="1">
+          <mxGeometry height="100" width="240" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-18" edge="1" parent="1" source="15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=-0.026;entryY=0.374;entryDx=0;entryDy=0;entryPerimeter=0;" target="13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Eon9-amu7quxDq0tKDAC-18" edge="1" parent="1" source="BCElcVMSOxZm8mQbk7RO-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Eo4jnEnb8if7Nie3sSzK-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-25" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Task Destinations&lt;br&gt;ID (PK)&lt;br&gt;SOURCE_ID (FK)&lt;div&gt;TYPE_OF_DESTINATION (JDBC, File)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="200" x="320" y="411" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-26" parent="1" style="shape=waypoint;sketch=0;size=6;pointerEvents=1;points=[];fillColor=#fff2cc;resizable=0;rotatable=0;perimeter=centerPerimeter;snapToPoint=1;align=left;verticalAlign=top;strokeColor=#d6b656;rounded=1;shadow=1;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="300" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="BCElcVMSOxZm8mQbk7RO-28" parent="1" style="shape=waypoint;sketch=0;size=6;pointerEvents=1;points=[];fillColor=#fff2cc;resizable=0;rotatable=0;perimeter=centerPerimeter;snapToPoint=1;align=left;verticalAlign=top;strokeColor=#d6b656;rounded=1;shadow=1;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="300" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="Eon9-amu7quxDq0tKDAC-21" edge="1" parent="1" source="Eo4jnEnb8if7Nie3sSzK-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Eo4jnEnb8if7Nie3sSzK-18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;overflow=fill;shadow=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=0;" value="Tasks da semaforo&lt;br&gt;ID (PK) id di confronto tra semaforo vecchio e nuovo&lt;div&gt;COD_ABI&lt;/div&gt;&lt;div&gt;COD_TABELLA (SOURCE_ID e anche DESTINATION_ID): FK verso tab_task_sources e tab_task_destinations)&lt;br&gt;&lt;div&gt;&lt;div&gt;COD_PROVENIENZA&lt;/div&gt;&lt;div&gt;NUM_PERIODO_RIF&lt;/div&gt;&lt;div&gt;COD_TIPO_CARICAMENTO (con la stessa utilià del gruppo...)&lt;/div&gt;&lt;div&gt;COD_COLONNA_VALORE: valorizzato solo in caso di READVC&lt;/div&gt;&lt;div&gt;NUM_AMBITO:&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;valorizzato solo in caso di READVC&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;NUM_MAX_DATAVA: da utilizzare per filtrare alla sorgente&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="170" width="420" x="480" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="Eon9-amu7quxDq0tKDAC-19" edge="1" parent="1" source="13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.288;entryY=1.018;entryDx=0;entryDy=0;entryPerimeter=0;" target="Eo4jnEnb8if7Nie3sSzK-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

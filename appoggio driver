@@ -1,19 +1,3 @@
-def read(self):
-    module = importlib.import_module(self.cfg["extra_params"]["module"])
-    conn = module.connect(
-        host=self.cfg["host"],
-        port=self.cfg["port"],
-        user=self.cfg["user"],
-        password=self.cfg["password"],
-        dbname=self.cfg["db_name"]
-    )
-    import pandas as pd
-    pdf = pd.read_sql(self.query or f"SELECT * FROM {self.table}", conn)
-    conn.close()
-    return self.spark.createDataFrame(pdf)
+source .venv/bin/activate
+python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
 
- source .venv/bin/activate
- python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
-
-
-spark.read.jdbc(url="jdbc:sqlserver://pdbclt076.syssede.systest.sanpaoloimi.com\\SYD202:1433;DatabaseName=RDBP0_MENS;encrypt=true;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NTLM;",table="(select top 1000 * from READVC where banca=3385) as subquery",properties={"user": "SYS_LG_RDB@SYSSPIMI","password": "4EfTw@B9UpCriK#epGiM","driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"})
