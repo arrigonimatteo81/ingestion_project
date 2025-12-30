@@ -4,6 +4,7 @@ from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.utils import extract_field_from_file, get_logger
 from factories.database_factory import DatabaseFactory
 from factories.partition_configuration_factory import PartitioningConfigurationFactory
+from helpers.query_renderer import QueryContext, QueryRenderer
 from metadata.loader.metadata_loader import ProcessorMetadata
 from metadata.models.tab_file import TabFileSource
 from metadata.models.tab_jdbc import TabJDBCSource
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 class SourceFactory:
 
     @staticmethod
-    def create_source(source_type: str, source_id: str, config_file: str):
+    def create_source(source_type: str, source_id: str, config_file: str, query_ctx: QueryContext = None):
 
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(connection_string)
@@ -30,18 +31,27 @@ class SourceFactory:
                 if jdbc_source.tablename:
                     return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
                 elif jdbc_source.query_text:
+                    #queste due righe di codice servono per capire se la query contiene segnaposto e, nel caso sostituirli
+                    #template = string.Template(self.query_template)
+                    #return bool(template.pattern.search(self.query_template))
+                    if query_ctx:
+                        query_text = QueryRenderer.render(
+                            jdbc_source.query_text,
+                            query_ctx.params
+                        )
+                    else:
+                        query_text = jdbc_source.query_text
                     if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
 
                         db_factory: DatabaseFactory = DatabaseFactory({"user": jdbc_source.username, "password": jdbc_source.pwd, "url": jdbc_source.url})
                         pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
                         partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(jdbc_source.partitioning_expression,
-                                                                                                                   jdbc_source.num_partitions,
-                                                                                                                   jdbc_source.query_text)
+                                                                                                                   jdbc_source.num_partitions,query_text)
                         return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
                                                jdbc_source.url,(f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} "
-                                                 f"from ({jdbc_source.query_text}) tab ) as subquery"), partitioning_cfg)
+                                                 f"from ({query_text}) tab ) as subquery"), partitioning_cfg)
                     else:
-                        query_transformed_per_spark: str = f"({jdbc_source.query_text}) as subquery"
+                        query_transformed_per_spark: str = f"({query_text}) as subquery"
                         return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, query_transformed_per_spark)
             elif source_type.upper() == SourceType.FILE.value:
                 file_source: TabFileSource = repository.get_file_source_info(source_id)

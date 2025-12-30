@@ -1,7 +1,7 @@
 from common.dataproc import DataprocService
 from metadata.loader.metadata_loader import OrchestratorMetadata
 from metadata.models.tab_groups import Group
-from metadata.models.tab_tasks import Task, TaskType
+from metadata.models.tab_tasks import Task, TaskType, TaskSemaforo
 import unittest
 
 TEST_RUN_ID = "20250115_1013"
@@ -18,10 +18,10 @@ class MockOrchestratorRepository(OrchestratorMetadata):
                 Group("REPORT2", "GRP1")]
 
     def get_task(self, task_id):
-        return Task("id_task_1", "source_id_1", "destination_id_1", "Task di test", "profilo_di_test", True)
+        return TaskSemaforo("uid", 1 , 3239, "source_id", "destination_id","PR",202512,"gruppo","colonna_valore",1,20251230090600)
 
     def get_task_configuration(self, config_task):
-        return TaskType("profilo_di_test", "descrizione profilo di test", "main_file_python.py",
+        return TaskType("03239-source_id-PR", "descrizione profilo di test", "main_file_python.py",
                         ["additional_file_1.py", "additional_file_2.py"], ["jar_file_uri"], ["additional_jar_file_uri"])
 
 
@@ -31,7 +31,7 @@ class TestDataprocService(unittest.TestCase):
 
     def test_instantiate_task(self):
         task1_job = DataprocService.instantiate_task(
-            task_id="id_task_1",
+            task_id="uid_1",
             repository=self.orchestrator_repo,
             run_id=TEST_RUN_ID,
             config_file=TEST_APPLICATION_CONF,
@@ -42,7 +42,7 @@ class TestDataprocService(unittest.TestCase):
         )  # asserts exactly the correct number of jobs are present
         task1_job = template_request["jobs"][0]"""
         self.assertEqual(
-            task1_job.get("step_id"), "step-id_task_1"
+            task1_job.get("step_id"), "step-uid_1"
         )  # assert correct task id
         self.assertEqual(
             task1_job.get("pyspark_job").get("main_python_file_uri"),

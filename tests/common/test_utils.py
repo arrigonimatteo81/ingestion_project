@@ -8,7 +8,7 @@ from common.utils import (
     extract_field_from_file,
     get_log_level_from_file,
     string_to_dict,
-    dict_to_string, get_logger, extract_db_type_from_jdbc_url, parse_jdbc_url_string
+    dict_to_string, get_logger, extract_db_type_from_jdbc_url, parse_jdbc_url_string, format_key_for_task_configuration
 )
 
 PATTERN_JDBC_URL_ORACLE = r"HOST=(?P<host>[^)]+).*?PORT=(?P<port>\d+).*?(SERVICE_NAME|SID)=(?P<db>[^)]+)"
@@ -251,3 +251,20 @@ class TestParseJdbcUrlString(unittest.TestCase):
             "jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=machine-scan.syssede.systest.sanpaoloimi.com)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SID=SERVICE_NAME)))",
             PATTERN_JDBC_URL_ORACLE)
         self.assertEqual(res.group('db'), "SERVICE_NAME")
+
+class TestFormatKeyForTaskConfiguration(unittest.TestCase):
+    def test_format_key_for_task_configuration_with_all_parameters(self):
+        res = format_key_for_task_configuration("REAGDG", 3239,"PR")
+        self.assertEqual(res, "03239-REAGDG-PR")
+
+    def test_format_key_for_task_configuration_with_only_first_parameter_and_default_on_the_others(self):
+        res = format_key_for_task_configuration("REAGDG" )
+        self.assertEqual(res, "REAGDG")
+
+    def test_format_key_for_task_configuration_with_only_first_parameter_and_empty_string_on_the_others(self):
+        res = format_key_for_task_configuration("REAGDG",cod_provenienza='' )
+        self.assertEqual(res, "REAGDG")
+
+    def test_format_key_for_task_configuration_with_cod_tabella_and_cod_abi(self):
+        res = format_key_for_task_configuration("REAGDG", 3239)
+        self.assertEqual(res, "03239-REAGDG")

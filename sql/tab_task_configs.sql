@@ -16,4 +16,4 @@ CREATE TABLE public.tab_task_configs (
 );
 
 
-GRANT SELECT ON table public.tab_task_configs TO utente;
+GRANT SELECT ON table public.tab_task_configs TO fdir_app;

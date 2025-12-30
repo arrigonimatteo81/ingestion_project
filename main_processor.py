@@ -2,17 +2,19 @@ import getopt
 import sys
 
 from common.result import OperationResult
+from common.task_semaforo_payload import TaskSemaforoPayload
 from common.utils import get_logger, extract_field_from_file, download_from_gcs
 from factories.processor_manager_factory import ProcessorManagerFactory
+from metadata.models.tab_tasks import TaskSemaforo
 
 logger = get_logger(__name__)
 
 
-def run_processor(run_id,task_id,config_file):
+def run_processor(run_id,task,config_file):
 
     logger.debug("Creating transformer")
     processor = ProcessorManagerFactory.create_processor_manager(
-        run_id=run_id, task_id=task_id, config_file=config_file
+        run_id=run_id, task=task, config_file=config_file
     )
     logger.info("Executing transformation task")
     processor_result: OperationResult = processor.start()
@@ -28,8 +30,9 @@ if __name__ == "__main__":
         for opt, arg in opts:
             if opt in ("-r", "--run_id"):
                 run_id = arg
-            elif opt in ("-t", "--task_id"):
-                task_id = arg
+            elif opt in ("-t", "--task"):
+                task_payload = TaskSemaforoPayload.from_json(arg)
+                task: TaskSemaforo = task_payload.to_domain()
             elif opt in ("-c", "--config_file"):
                 config_file = arg
             elif opt in ("-b", "--is_blocking"):
@@ -39,7 +42,7 @@ if __name__ == "__main__":
 
     try:
         print(
-            f"Starting processor_main with run_id: {run_id}, task_id: {task_id}, config_file: {config_file}, is_blocking: {is_blocking}"
+            f"Starting processor_main with run_id: {run_id}, task_id: {task.uid}, config_file: {config_file}, is_blocking: {is_blocking}"
         )
         if config_file.lower().startswith("gs://"):
             logger.info(f"Download {config_file} from gcs...")
@@ -49,7 +52,7 @@ if __name__ == "__main__":
                 f"Skipping download json from gcs since {config_file} doesn't start with gcs"
             )
 
-        processor_result = run_processor(run_id,task_id,config_file)
+        processor_result = run_processor(run_id,task,config_file)
         logger.info(
             f"transformation task completed exited successfully: {processor_result.successful}"
         )

@@ -1,6 +1,9 @@
 
 INSERT INTO public.tab_task_configs ("name",description,main_python_file,additional_python_file_uris,jar_file_uris,additional_file_uris,archive_file_uris,logging_config,dataproc_properties,processor_type) VALUES
-	 ('config1','configurazione di test 1','main_processor.py','{}','{jar/postgresql-42.7.8.jar}','{}','{}',NULL,NULL,'spark');
+	 ('03239-REAGDG-AN','configurazione per REAGDG banca 3239','main_processor.py','{}','{jar/mssql-jdbc-12.2.0.jre11.jar}','{}','{}',NULL,NULL,'spark');
+INSERT INTO public.tab_task_configs ("name",description,main_python_file,additional_python_file_uris,jar_file_uris,additional_file_uris,archive_file_uris,logging_config,dataproc_properties,processor_type) VALUES
+	 ('DEFAULT','configurazione di default','main_processor.py','{}','{jar/mssql-jdbc-12.2.0.jre11.jar}','{}','{}',NULL,NULL,'spark');
+
 -----------------------------------------------------------------------------------------------------------------
 INSERT INTO public.tab_tasks
 (id, source_id, destination_id, description, config_profile, is_blocking)

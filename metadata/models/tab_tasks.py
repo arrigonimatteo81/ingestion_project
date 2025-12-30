@@ -151,6 +151,10 @@ class TaskType:
             f")"
         )
 
+    @classmethod
+    def default(cls):
+        return cls(name="DEFAULT", description="Descrizione di default", main_python_file_uri="main_processor.py")
+
 @dataclass
 class Task:
     id: str
@@ -159,3 +163,17 @@ class Task:
     description: str
     config_profile: str
     is_blocking: bool = True
+
+@dataclass
+class TaskSemaforo:
+    uid: str
+    id: int
+    cod_abi: int
+    source_id: str
+    destination_id: str
+    cod_provenienza: str
+    num_periodo_rif: int
+    cod_gruppo: str
+    cod_colonna_valore: str
+    num_ambito: int
+    num_max_data_va: int

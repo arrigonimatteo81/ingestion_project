@@ -7,7 +7,7 @@ from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from metadata.models.tab_config import Config
 from metadata.models.tab_groups import Group
 from metadata.models.tab_log import TaskLog
-from metadata.models.tab_tasks import Task, TaskType
+from metadata.models.tab_tasks import Task, TaskType, TaskSemaforo
 from processor.domain import TaskState
 
 logger = get_logger(__name__)
@@ -41,27 +41,39 @@ class CommonMetadata(MetadataLoader):
 class OrchestratorMetadata(MetadataLoader):
 
     def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
-        cur = self.conn.cursor()
-        str_group = "',".join(groups)
-        logger.debug(str_group)
-        cur.execute(f"SELECT * FROM public.tab_task_group where group_name in ('{str_group}')")
-        rows = cur.fetchall()
-        result = []
-        for r in rows:
-            result.append(Group(*r))
-        return result
+        with self.conn.cursor() as cur:
+            str_group = "',".join(groups)
+            logger.debug(str_group)
+            cur.execute(f"SELECT uid,cod_gruppo FROM public.tab_tasks_semaforo where cod_gruppo in ('{str_group}')")
+            rows = cur.fetchall()
+            result = []
+            for r in rows:
+                result.append(Group(*r))
+            return result
 
-    def get_task(self, task_id) -> Task:
-        cur = self.conn.cursor()
-        cur.execute(f"SELECT * FROM public.tab_tasks where id ='{task_id}'")
-        row = cur.fetchone()
-        return Task(*row)
+    def get_task(self, task_id) -> TaskSemaforo:
+        with self.conn.cursor() as cur:
+            cur.execute(f"SELECT * FROM public.tab_tasks_semaforo where id ='{task_id}'")
+            row = cur.fetchone()
+            return TaskSemaforo(*row)
 
     def get_task_configuration(self, task_config_profile: str) -> TaskType:
-        cur = self.conn.cursor()
-        cur.execute(f"SELECT * FROM public.tab_task_configs where name ='{task_config_profile}'")
-        row = cur.fetchone()
-        return TaskType(*row)
+        with self.conn.cursor() as cur:
+            cur.execute("""
+            SELECT *
+            FROM public.tab_task_configs
+            WHERE name IN (%s, %s)
+            ORDER BY CASE
+                WHEN name = %s THEN 0
+                WHEN name = 'DEFAULT' THEN 1
+            END
+            LIMIT 1
+            """,
+            (task_config_profile, "DEFAULT", task_config_profile) )
+            row = cur.fetchone()
+            if row is None:
+                return TaskType.default()
+            return TaskType(*row)
 
 class ProcessorMetadata(MetadataLoader):
 
@@ -74,14 +86,14 @@ class ProcessorMetadata(MetadataLoader):
 
     def get_task_processor_type(self, task_id: str) -> str:
         cur = self.conn.cursor()
-        cur.execute(f"select processor_type from public.tab_tasks join public.tab_task_configs on tab_tasks.config_profile  = tab_task_configs.name where tab_tasks.id='{task_id}'")
+        cur.execute(f"select processor_type from public.tab_task_configs where tab_task_configs.name='{task_id}'")
         row = cur.fetchone()
         return row[0]
 
     def get_source_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
-        cur.execute(f"SELECT b.source_id, b.source_type FROM public.tab_tasks a join public.tab_task_sources b on a.source_id = b.source_id  "
-                    f"where a.id ='{task_id}'")
+        cur.execute(f"SELECT b.source_id, b.source_type FROM public.tab_tasks_semaforo a join public.tab_task_sources b "
+                    f"on a.source_id = b.source_id  where a.id ='{task_id}'")
         row = cur.fetchone()
         return row
 
@@ -102,8 +114,8 @@ class ProcessorMetadata(MetadataLoader):
 
     def get_destination_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
-        cur.execute(f"SELECT b.destination_id, b.destination_type FROM public.tab_tasks a join public.tab_task_destinations b on a.destination_id = b.destination_id "
-                    f"where a.id ='{task_id}'")
+        cur.execute(f"SELECT b.destination_id, b.destination_type FROM public.tab_tasks_semaforo a join public.tab_task_destinations b "
+                    f"on a.destination_id = b.destination_id where a.id ='{task_id}'")
         row = cur.fetchone()
         return row
 

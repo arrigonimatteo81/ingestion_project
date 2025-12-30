@@ -206,3 +206,17 @@ def extract_db_type_from_jdbc_url(jdbc_url:str):
 def parse_jdbc_url_string (jdbc_url:str, pattern:str):
     return re.search(pattern, jdbc_url, re.IGNORECASE)
 
+
+def format_key_for_task_configuration(cod_tabella: str, cod_abi: int=None, cod_provenienza: str=None):
+    parts = []
+
+    if cod_abi:
+        parts.append(str(cod_abi).rjust(5,'0'))
+
+    parts.append(str(cod_tabella))
+
+    if cod_provenienza:
+        parts.append(str(cod_provenienza))
+
+    return "-".join(parts)
+

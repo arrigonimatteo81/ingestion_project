@@ -1,3 +1,60 @@
 source .venv/bin/activate
 python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
 
+Step 1 – DB di configurazione (query template)
+
+Nel DB NON usare {} ma placeholder espliciti:
+
+SELECT pippo, pluto, ${valore}
+FROM tabella
+WHERE campo = ${campo1}
+
+🧱 Step 2 – Repository carica il template (NON lo risolve)
+class TabJDBCSource:
+    ...
+    self.query_template = metadata["query_template"]
+
+class QueryContext:
+    def __init__(self, **params):
+        self.params = params
+
+🧱 Step 3 – Task costruisce il QueryContext
+query_ctx = QueryContext(
+    valore="my_expression",      # SELECT
+    campo1="'ABC123'"             # WHERE (già quotato)
+)
+
+
+⚠️ Nota importante:
+
+il task NON scrive SQL arbitrario
+
+valore deve essere pre-validato
+
+🧱 Step 4 – Renderizzazione (punto chiave)
+Utility neutra (NON nella factory)
+class QueryRenderer:
+    @staticmethod
+    def render(template: str, params: dict) -> str:
+        query = template
+        for k, v in params.items():
+            query = query.replace(f"${{{k}}}", str(v))
+        return query
+
+🧱 Step 5 – Integrazione nel flusso attuale
+Modifica minima alla factory
+def create_source(..., query_ctx: QueryContext | None = None):
+
+
+Nel ramo JDBC:
+
+jdbc_source = repository.get_jdbc_source_info(source_id)
+
+query_text = jdbc_source.query_template
+if query_ctx:
+    query_text = QueryRenderer.render(
+        jdbc_source.query_template,
+        query_ctx.params
+    )
+
+# da qui in poi il tuo codice IDENTICO
