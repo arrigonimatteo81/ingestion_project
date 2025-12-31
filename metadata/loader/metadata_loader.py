@@ -53,7 +53,7 @@ class OrchestratorMetadata(MetadataLoader):
 
     def get_task(self, task_id) -> TaskSemaforo:
         with self.conn.cursor() as cur:
-            cur.execute(f"SELECT * FROM public.tab_tasks_semaforo where id ='{task_id}'")
+            cur.execute(f"SELECT * FROM public.tab_tasks_semaforo where uid ='{task_id}'")
             row = cur.fetchone()
             return TaskSemaforo(*row)
 
@@ -93,7 +93,7 @@ class ProcessorMetadata(MetadataLoader):
     def get_source_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
         cur.execute(f"SELECT b.source_id, b.source_type FROM public.tab_tasks_semaforo a join public.tab_task_sources b "
-                    f"on a.source_id = b.source_id  where a.id ='{task_id}'")
+                    f"on a.source_id = b.source_id  where a.uid ='{task_id}'")
         row = cur.fetchone()
         return row
 
@@ -115,7 +115,7 @@ class ProcessorMetadata(MetadataLoader):
     def get_destination_info(self, task_id: str) -> (str,str):
         cur = self.conn.cursor()
         cur.execute(f"SELECT b.destination_id, b.destination_type FROM public.tab_tasks_semaforo a join public.tab_task_destinations b "
-                    f"on a.destination_id = b.destination_id where a.id ='{task_id}'")
+                    f"on a.destination_id = b.destination_id where a.uid ='{task_id}'")
         row = cur.fetchone()
         return row
 
@@ -135,7 +135,7 @@ class ProcessorMetadata(MetadataLoader):
 
     def get_task_group(self, task_id) -> str:
         cur = self.conn.cursor()
-        cur.execute(f"SELECT group_name FROM public.tab_task_group where task_id ='{task_id}'")
+        cur.execute(f"SELECT cod_gruppo FROM public.tab_tasks_semaforo where uid ='{task_id}'")
         row = cur.fetchone()
         return row[0]
 
@@ -147,12 +147,13 @@ class ProcessorMetadata(MetadataLoader):
             task_log_description=description,
         )
 
-    def insert_task_log_successful(self, task_id: str, run_id: str, description: str = ""):
+    def insert_task_log_successful(self, task_id: str, run_id: str, description: str = "", rows_affected: int = 0):
         self.insert_task_log(
             task_id=task_id,
             run_id=run_id,
             task_state=TaskState.SUCCESSFUL,
             task_log_description=description,
+            rows_affected=rows_affected
         )
 
     def insert_task_log_failed(self, task_id: str, run_id: str, error_message: str, description: str = ""):
@@ -193,7 +194,8 @@ class ProcessorMetadata(MetadataLoader):
             task_group=group,
             description=task_log_description,
             error_message=error_message,
-            update_ts=update_ts
+            update_ts=update_ts,
+            num_rows_affected=rows_affected
         )
         self._save_task_log(task_log)
 
@@ -201,8 +203,8 @@ class ProcessorMetadata(MetadataLoader):
         with self.conn as conn:
             with conn.cursor() as cur:
                 try:
-                    cur.execute(f"INSERT INTO public.tab_task_logs (task_id, run_id, state_id, description, error_message, update_ts, task_group)"
+                    cur.execute(f"INSERT INTO public.tab_task_logs (task_id, run_id, state_id, description, error_message, update_ts, task_group, rows_affected)"
                         f"values('{log.task}','{log.run_id}','{log.state.value}','{log.description}',"
-                        f"'{log.error_message}','{log.update_ts}','{log.task_group}')")
+                        f"'{log.error_message}','{log.update_ts}','{log.task_group}', {log.num_rows_affected})")
                 except TimeoutError as te:
                     raise te

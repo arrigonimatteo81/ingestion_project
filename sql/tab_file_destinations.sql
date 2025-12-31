@@ -12,7 +12,7 @@ CREATE TABLE public.tab_file_destinations (
         (
             (format_file in ('csv','CSV') AND csv_separator IS NOT NULL)
             or
-            (format_file in ('parquet','PARQUET') AND csv_separator NOT NULL)
+            (format_file in ('parquet','PARQUET') AND csv_separator IS NULL)
             or
             (format_file in ('avro','AVRO') AND csv_separator IS NULL)
             or

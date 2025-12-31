@@ -14,3 +14,4 @@ class TaskLog:
     error_message: str
     update_ts: datetime
     task_group: str
+    num_rows_affected: int

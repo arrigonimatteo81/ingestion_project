@@ -30,14 +30,7 @@ class BaseProcessorManager (ABC):
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
         source_id,source_type = self._repository.get_source_info(self._task.uid)
-        query_ctx = QueryContext(
-            cod_abi=self._task.cod_abi,
-            cod_provenienza=self._task.cod_provenienza,
-            num_periodo_rif=self._task.num_periodo_rif,
-            cod_colonna_valore=self._task.cod_colonna_valore,
-            num_ambito=self._task.num_ambito,
-            num_max_data_va=self._task.num_max_data_va,
-        )
+        query_ctx = self._compose_query_context()
         task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file, query_ctx)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
@@ -55,6 +48,17 @@ class BaseProcessorManager (ABC):
         )
 
         return task_source, task_is_blocking, task_destination
+
+    def _compose_query_context(self):
+        query_ctx = QueryContext(
+            cod_abi=self._task.cod_abi,
+            cod_provenienza=self._task.cod_provenienza,
+            num_periodo_rif=self._task.num_periodo_rif,
+            cod_colonna_valore=self._task.cod_colonna_valore,
+            num_ambito=self._task.num_ambito,
+            num_max_data_va=self._task.num_max_data_va,
+        )
+        return query_ctx
 
     @abstractmethod
     def start(self) -> OperationResult:
@@ -81,7 +85,7 @@ class SparkProcessorManager (BaseProcessorManager):
             df = task_source.to_dataframe(session)
             task_destination.write(df)
             self._repository.insert_task_log_successful(self._task.uid, self._run_id,
-                                                        f"task {self._task.uid} concluso con successo")
+                                                        f"task {self._task.uid} concluso con successo", df.count())
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")

@@ -1,60 +1,270 @@
 source .venv/bin/activate
 python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
 
-Step 1 – DB di configurazione (query template)
+Punto fermo
 
-Nel DB NON usare {} ma placeholder espliciti:
+👉 Il tuo codice è già un “Task” orchestratore.
+Quello che manca è:
 
-SELECT pippo, pluto, ${valore}
-FROM tabella
-WHERE campo = ${campo1}
+separare meglio le responsabilità
 
-🧱 Step 2 – Repository carica il template (NON lo risolve)
-class TabJDBCSource:
-    ...
-    self.query_template = metadata["query_template"]
+rendere estendibili le parti “alcuni task fanno anche X”
 
-class QueryContext:
-    def __init__(self, **params):
-        self.params = params
+Non devi buttare via nulla.
 
-🧱 Step 3 – Task costruisce il QueryContext
-query_ctx = QueryContext(
-    valore="my_expression",      # SELECT
-    campo1="'ABC123'"             # WHERE (già quotato)
-)
+Cosa rappresenta il TUO codice oggi
 
+Questa classe sta facendo 3 cose insieme:
 
-⚠️ Nota importante:
+Orchestrazione del task
 
-il task NON scrive SQL arbitrario
+Logging di stato
 
-valore deve essere pre-validato
+Decisioni condizionali (blocking / non blocking)
 
-🧱 Step 4 – Renderizzazione (punto chiave)
-Utility neutra (NON nella factory)
-class QueryRenderer:
-    @staticmethod
-    def render(template: str, params: dict) -> str:
-        query = template
-        for k, v in params.items():
-            query = query.replace(f"${{{k}}}", str(v))
-        return query
+Va bene, ma è il punto giusto dove agganciare:
 
-🧱 Step 5 – Integrazione nel flusso attuale
-Modifica minima alla factory
-def create_source(..., query_ctx: QueryContext | None = None):
+conteggio righe
+
+post-azioni (update registro, ecc.)
+
+Come adattarlo alle indicazioni (step by step)
+1️⃣ _get_common_data() → torna anche le PostTaskAction
+
+Oggi:
+
+task_source, task_is_blocking, task_destination = self._get_common_data()
 
 
-Nel ramo JDBC:
+👉 Estendilo senza rompere nulla:
 
-jdbc_source = repository.get_jdbc_source_info(source_id)
+task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
 
-query_text = jdbc_source.query_template
-if query_ctx:
-    query_text = QueryRenderer.render(
-        jdbc_source.query_template,
-        query_ctx.params
+
+Dentro _get_common_data():
+
+leggi configurazione task
+
+costruisci:
+
+Source
+
+Destination
+
+lista di PostTaskAction (vuota per molti task)
+
+2️⃣ Conteggio righe → qui è il punto giusto
+
+Subito dopo il read:
+
+df = task_source.to_dataframe(session)
+row_count = df.count()
+
+
+Questo valore:
+
+lo logghi
+
+lo passi alle post-azioni
+
+lo puoi salvare nel DB
+
+3️⃣ Inserisci le PostTaskAction (senza if)
+
+Subito dopo la write:
+
+task_destination.write(df)
+
+for action in post_actions:
+    action.execute(df, task_context)
+
+
+⚠️ Nota: post_actions può essere [], quindi zero impatto sugli altri task.
+
+4️⃣ TaskContext: NON stravolgerti
+
+Non serve riscrivere tutto.
+Puoi iniziare minimal.
+
+TaskContext minimale
+class TaskContext:
+    def __init__(self, task, run_id, repository):
+        self.task = task
+        self.run_id = run_id
+        self.repository = repository
+        self.row_count = None
+
+5️⃣ Codice finale adattato (quasi identico al tuo)
+try:
+    self._repository.insert_task_log_running(
+        self._task.uid, self._run_id,
+        f"task {self._task.uid} avviato"
     )
 
-# da qui in poi il tuo codice IDENTICO
+    logger.debug(f"inizio {self._task.uid}, {self._run_id}")
+
+    (
+        task_source,
+        task_is_blocking,
+        task_destination,
+        post_actions
+    ) = self._get_common_data()
+
+    session = self._get_spark_session()
+
+    task_context = TaskContext(
+        task=self._task,
+        run_id=self._run_id,
+        repository=self._repository
+    )
+
+    df = task_source.to_dataframe(session)
+
+    task_context.row_count = df.count()
+
+    task_destination.write(df)
+
+    for action in post_actions:
+        action.execute(df, task_context)
+
+    self._repository.insert_task_log_successful(
+        self._task.uid,
+        self._run_id,
+        f"task {self._task.uid} concluso con successo "
+        f"(righe={task_context.row_count})"
+    )
+
+    logger.debug(f"task {self._task.uid} concluso con successo")
+
+    return OperationResult(successful=True, description="")
+
+except Exception as exc:
+    ...
+
+6️⃣ Esempio di PostTaskAction concreta (registro)
+class UpdateRegistroAction(PostTaskAction):
+
+    def execute(self, df, ctx: TaskContext):
+        max_value = df.agg(F.max("data_rif")).collect()[0][0]
+
+        ctx.repository.update_registro(
+            ctx.task.uid,
+            max_value
+        )
+
+Perché così funziona (e scala)
+
+✔ Non tocchi la Source
+✔ Non tocchi la Destination
+✔ Nessun if task_type == ...
+✔ _get_common_data() diventa il punto di configurazione
+✔ Task rimane leggibile
+✔ Logging e stato restano dove sono
+
+TL;DR operativo
+
+Estendi _get_common_data() → ritorna anche post_actions
+
+Calcola df.count() nel task
+
+Introduci TaskContext minimale
+
+Esegui le post-azioni dopo la write
+
+Nessuna logica nella Source
+
+Se vuoi, nel prossimo messaggio posso:
+
+aiutarti a rifattorizzare _get_common_data()
+
+mostrarti come caricare le post-azioni da DB
+
+dirti come evitare doppie action su retry
+
+ottimizzare count() + max() in una sola passata
+
+---------------------------------------------------
+Domanda centrale.
+La risposta onesta è: sì, un if da qualche parte ci deve essere.
+La risposta architetturalmente corretta è: non lì, e non così.
+
+Ti spiego dove sì, dove no, e perché.
+
+Punto chiave
+
+👉 La scelta della PostAction dipende dalla configurazione del task,
+non dalla logica del TaskRunner.
+
+_get_common_data() non deve conoscere il significato delle tabelle.
+
+❌ Quello che stai per fare (e perché è un problema)
+def _get_common_data():
+    ...
+    if nome_tabella == "T_FATTURE":
+        post_actions = [UpdateRegistroAction()]
+
+
+Problemi:
+
+_get_common_data() diventa knowledge hub
+
+accoppi TaskRunner ↔ nomi fisici tabelle
+
+ogni nuova tabella = modifica codice
+
+test difficili
+
+✅ Dove DEVE stare la decisione
+Nel metadata del task (DB / config)
+
+Il concetto giusto è:
+
+“Questo task ha una post-action X”
+
+Non:
+
+“Se leggo la tabella Y allora…”
+
+Soluzione corretta (pragmatica)
+1️⃣ Metti l’informazione nel DB (o YAML)
+
+Esempio tabella TASK_CONFIG:
+
+task_uid	source	destination	post_action
+T01	SRC_A	T_FATTURE	UPDATE_REGISTRO
+T02	SRC_B	FILE_X	NULL
+
+Oppure:
+
+{
+  "post_actions": ["UPDATE_REGISTRO"]
+}
+
+2️⃣ Factory delle PostAction (unico punto con if)
+class PostTaskActionFactory:
+
+    def create(self, task_config) -> list[PostTaskAction]:
+        actions = []
+
+        for action_code in task_config.post_actions:
+            if action_code == "UPDATE_REGISTRO":
+                actions.append(UpdateRegistroAction())
+
+        return actions
+
+
+👉 Qui l’if è giusto, perché:
+
+traduce config → oggetti
+
+è il suo lavoro
+
+3️⃣ _get_common_data() diventa neutra
+def _get_common_data():
+    task_config = self._repository.get_task_config(self._task.uid)
+
+    source = SourceFactory.create(task_config)
+    destination = SinkFactory.create(task_config)
+    post_actions = PostTaskActionFactory().create(task_config)
+
+    return source, task_config.is_blocking, destination, post_actions
