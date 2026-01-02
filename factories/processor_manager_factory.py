@@ -1,5 +1,5 @@
 from common.utils import extract_field_from_file, get_logger, format_key_for_task_configuration
-from metadata.loader.metadata_loader import ProcessorMetadata
+from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.domain import ProcessorType
 from processor.manager import SparkProcessorManager, BaseProcessorManager
@@ -10,7 +10,7 @@ class ProcessorManagerFactory:
     @staticmethod
     def create_processor_manager(run_id: str, task: TaskSemaforo, config_file: str) -> BaseProcessorManager:
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
-        repository = ProcessorMetadata(connection_string)
+        repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
             processor_type = repository.get_task_processor_type(format_key_for_task_configuration(task.source_id,task.cod_abi,task.cod_provenienza))
             logger.debug(f"Processor type for task {task.uid}: {processor_type}")

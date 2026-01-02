@@ -3,7 +3,7 @@ import subprocess
 from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
-from metadata.loader.metadata_loader import OrchestratorMetadata
+from metadata.loader.metadata_loader import OrchestratorMetadata, MetadataLoader
 
 logger = get_logger(__name__)
 
@@ -22,7 +22,7 @@ class OrchestratorManager:
 
         if repository is None:
             logger.debug("Initializing the db and repository")
-            self._repository = OrchestratorMetadata(self._connection_string)
+            self._repository = OrchestratorMetadata(MetadataLoader(self._connection_string))
         else:
             self._repository = repository
 

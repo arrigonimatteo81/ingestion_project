@@ -1,5 +1,5 @@
 from common.utils import extract_field_from_file, get_logger
-from metadata.loader.metadata_loader import ProcessorMetadata
+from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_file import TabFileDest
 from metadata.models.tab_jdbc import TabJDBCDest
 from processor.destinations.base import Destination
@@ -13,7 +13,7 @@ class DestinationFactory:
     @staticmethod
     def create_destination(destination_type: str, destination_id: str, config_file: str) -> Destination:
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
-        repository = ProcessorMetadata(connection_string)
+        repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
             if destination_type.upper() == DestinationType.JDBC.value:
                 jdbc_destination :TabJDBCDest = repository.get_jdbc_dest_info(destination_id)

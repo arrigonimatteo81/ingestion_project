@@ -1,270 +1,261 @@
 source .venv/bin/activate
 python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
+----------------------------------
+CREATE TABLE registro (
+    chiave JSONB PRIMARY KEY,
+    last_id BIGINT NOT NULL,
+    max_data_va DATE,
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+------------query di upsert in registro-------------
+INSERT INTO registro (
+    chiave,
+    last_id,
+    max_data_va,
+    updated_at
+)
+VALUES (
+    :chiave,
+    :last_id,
+    :max_data_va,
+    NOW()
+)
+ON CONFLICT (chiave)
+DO UPDATE SET
+    last_id = EXCLUDED.last_id,
+    max_data_va = EXCLUDED.max_data_va,
+    updated_at = NOW()
+WHERE registro.last_id < EXCLUDED.last_id;
+------questa è semaforo_norm-----------
+SELECT
+    id,
+    tabella,
+    tipo_caricamento,
+    CASE
+        WHEN tipo_caricamento = 'DOMINI' THEN
+            jsonb_build_object('tabella', tabella)
+        ELSE
+            jsonb_build_object(
+                'cod_abi', cod_abi,
+                'tabella', tabella,
+                'provenienza', provenienza
+            )
+    END AS chiave,
+    data_va
+FROM stg_semaforo_raw;
+-------tabella che l'orchestrator deve leggere e confronta semaforo/registro con chiave json (diverse per tipo_caricamento)----------------------------
+CREATE OR REPLACE TABLE semaforo_ready AS
+SELECT
+    s.*
+FROM semaforo_norm s
+LEFT JOIN registro r
+    ON r.chiave = s.chiave
+WHERE
+    r.last_id IS NULL
+    OR s.id > r.last_id;
+------class TaskSemaforo-------------
+from dataclasses import dataclass
+from typing import Dict
 
-Punto fermo
-
-👉 Il tuo codice è già un “Task” orchestratore.
-Quello che manca è:
-
-separare meglio le responsabilità
-
-rendere estendibili le parti “alcuni task fanno anche X”
-
-Non devi buttare via nulla.
-
-Cosa rappresenta il TUO codice oggi
-
-Questa classe sta facendo 3 cose insieme:
-
-Orchestrazione del task
-
-Logging di stato
-
-Decisioni condizionali (blocking / non blocking)
-
-Va bene, ma è il punto giusto dove agganciare:
-
-conteggio righe
-
-post-azioni (update registro, ecc.)
-
-Come adattarlo alle indicazioni (step by step)
-1️⃣ _get_common_data() → torna anche le PostTaskAction
-
-Oggi:
-
-task_source, task_is_blocking, task_destination = self._get_common_data()
-
-
-👉 Estendilo senza rompere nulla:
-
-task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
-
-
-Dentro _get_common_data():
-
-leggi configurazione task
-
-costruisci:
-
-Source
-
-Destination
-
-lista di PostTaskAction (vuota per molti task)
-
-2️⃣ Conteggio righe → qui è il punto giusto
-
-Subito dopo il read:
-
-df = task_source.to_dataframe(session)
-row_count = df.count()
-
-
-Questo valore:
-
-lo logghi
-
-lo passi alle post-azioni
-
-lo puoi salvare nel DB
-
-3️⃣ Inserisci le PostTaskAction (senza if)
-
-Subito dopo la write:
-
-task_destination.write(df)
-
-for action in post_actions:
-    action.execute(df, task_context)
+@dataclass(frozen=True)
+class TaskSemaforo:
+    uid: str
+    id_semaforo: int
+    source_id: str
+    destination_id: str
+    tipo_caricamento: str
+    key: Dict
+    query_params: Dict
+-----class TaskSemaforoPayload(per il passaggio info tra orchestrator e processor)------
+from dataclasses import dataclass, asdict
+from typing import Dict, Optional
+import json
 
 
-⚠️ Nota: post_actions può essere [], quindi zero impatto sugli altri task.
+@dataclass
+class TaskSemaforoPayload:
+    # identità tecnica
+    uid: str
+    id_semaforo: int
 
-4️⃣ TaskContext: NON stravolgerti
+    # configurazione tecnica
+    source_id: str
+    destination_id: str
+    tipo_caricamento: str
 
-Non serve riscrivere tutto.
-Puoi iniziare minimal.
+    # business
+    key: Dict
+    query_params: Dict
 
-TaskContext minimale
-class TaskContext:
-    def __init__(self, task, run_id, repository):
-        self.task = task
-        self.run_id = run_id
-        self.repository = repository
-        self.row_count = None
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
 
-5️⃣ Codice finale adattato (quasi identico al tuo)
-try:
-    self._repository.insert_task_log_running(
-        self._task.uid, self._run_id,
-        f"task {self._task.uid} avviato"
-    )
+    @classmethod
+    def from_json(cls, json_str: str) -> "TaskSemaforoPayload":
+        return cls(**json.loads(json_str))
 
-    logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-
-    (
-        task_source,
-        task_is_blocking,
-        task_destination,
-        post_actions
-    ) = self._get_common_data()
-
-    session = self._get_spark_session()
-
-    task_context = TaskContext(
-        task=self._task,
-        run_id=self._run_id,
-        repository=self._repository
-    )
-
-    df = task_source.to_dataframe(session)
-
-    task_context.row_count = df.count()
-
-    task_destination.write(df)
-
-    for action in post_actions:
-        action.execute(df, task_context)
-
-    self._repository.insert_task_log_successful(
-        self._task.uid,
-        self._run_id,
-        f"task {self._task.uid} concluso con successo "
-        f"(righe={task_context.row_count})"
-    )
-
-    logger.debug(f"task {self._task.uid} concluso con successo")
-
-    return OperationResult(successful=True, description="")
-
-except Exception as exc:
-    ...
-
-6️⃣ Esempio di PostTaskAction concreta (registro)
-class UpdateRegistroAction(PostTaskAction):
-
-    def execute(self, df, ctx: TaskContext):
-        max_value = df.agg(F.max("data_rif")).collect()[0][0]
-
-        ctx.repository.update_registro(
-            ctx.task.uid,
-            max_value
+    def to_domain(self) -> "TaskSemaforo":
+        return TaskSemaforo(
+            uid=self.uid,
+            id_semaforo=self.id_semaforo,
+            source_id=self.source_id,
+            destination_id=self.destination_id,
+            tipo_caricamento=self.tipo_caricamento,
+            key=self.key,
+            query_params=self.query_params
         )
 
-Perché così funziona (e scala)
+---nell'orchestrator leggo la semaforo_ready e costruisco la TaskSemaforoPayload(row dovrebbe essere la riga che leggo dalla "semaforo_ready")---
+payload = TaskSemaforoPayload(
+    uid=row["uid"],
+    id_semaforo=row["id"],
+    source_id=row["source_id"],
+    destination_id=row["destination_id"],
+    tipo_caricamento=row["tipo_caricamento"],
+    key=row["chiave"],
+    query_params={
+        "num_periodo_rif": row["num_periodo_rif"]
+    }
+)
+-------TaskContext-----------
+@dataclass(frozen=True)
+class TaskContext:
+    task: TaskSemaforo
+    key: dict
+    query_params: dict
+    registro_repo: RegistroRepository
+-------cosa fa il processor-------
+payload = TaskSemaforoPayload.from_json(msg)
+task = payload.to_domain()
 
-✔ Non tocchi la Source
-✔ Non tocchi la Destination
-✔ Nessun if task_type == ...
-✔ _get_common_data() diventa il punto di configurazione
-✔ Task rimane leggibile
-✔ Logging e stato restano dove sono
+ctx = TaskContext(
+    task,
+    key=task.key,
+    query_params=task.query_params,
+    registro_repo=repo
+)
+----class QueryResolver--------
+class QueryResolver:
 
-TL;DR operativo
+    @staticmethod
+    def resolve(template: str, ctx: TaskContext) -> str:
+        values = {}
+        values.update(ctx.key)
+        values.update(ctx.query_params)
+        values["id_semaforo"] = ctx.task.id
 
-Estendi _get_common_data() → ritorna anche post_actions
+        query = template
+        for k, v in values.items():
+            query = query.replace(f"${{{k}}}", repr(v))
 
-Calcola df.count() nel task
+        return query
+-----codice per sistemare la query di lettura-----
+query = QueryResolver.resolve(self.query_template, ctx)
 
-Introduci TaskContext minimale
+df = spark.read.jdbc(
+    url=self.url,
+    table=f"({query}) q",
+    properties=self.props
+)
+--------RegistroUpdateStrategyFactory per settare le post action-----
+class RegistroUpdateStrategyFactory:
 
-Esegui le post-azioni dopo la write
+    def create(self, tipo_caricamento: str) -> RegistroUpdateStrategy:
+        if tipo_caricamento in ("CLIENTI", "RAPPORTI"):
+            return IdAndDateUpdateStrategy()
+        if tipo_caricamento in ("DATI", "DOMINI"):
+            return OnlyIdUpdateStrategy()
+        raise ValueError(tipo_caricamento)
+------nella _get_common_data---------
+strategy = RegistroUpdateStrategyFactory().create(task.tipo_caricamento)
 
-Nessuna logica nella Source
+post_actions = [
+    UpdateRegistroAction(strategy)
+]
+-----------------------------------
+from abc import ABC, abstractmethod
+from pyspark.sql import DataFrame
 
-Se vuoi, nel prossimo messaggio posso:
+class PostTaskAction(ABC):
 
-aiutarti a rifattorizzare _get_common_data()
+    @abstractmethod
+    def execute(self, df: DataFrame, ctx):
+        pass
 
-mostrarti come caricare le post-azioni da DB
+class UpdateRegistroAction(PostTaskAction):
 
-dirti come evitare doppie action su retry
+    def __init__(self, strategy):
+        self.strategy = strategy
 
-ottimizzare count() + max() in una sola passata
+    def execute(self, df, ctx):
+        self.strategy.update(df, ctx)
+-----------------------------------
+class RegistroUpdateStrategy(ABC):
 
----------------------------------------------------
-Domanda centrale.
-La risposta onesta è: sì, un if da qualche parte ci deve essere.
-La risposta architetturalmente corretta è: non lì, e non così.
-
-Ti spiego dove sì, dove no, e perché.
-
-Punto chiave
-
-👉 La scelta della PostAction dipende dalla configurazione del task,
-non dalla logica del TaskRunner.
-
-_get_common_data() non deve conoscere il significato delle tabelle.
-
-❌ Quello che stai per fare (e perché è un problema)
-def _get_common_data():
-    ...
-    if nome_tabella == "T_FATTURE":
-        post_actions = [UpdateRegistroAction()]
-
-
-Problemi:
-
-_get_common_data() diventa knowledge hub
-
-accoppi TaskRunner ↔ nomi fisici tabelle
-
-ogni nuova tabella = modifica codice
-
-test difficili
-
-✅ Dove DEVE stare la decisione
-Nel metadata del task (DB / config)
-
-Il concetto giusto è:
-
-“Questo task ha una post-action X”
-
-Non:
-
-“Se leggo la tabella Y allora…”
-
-Soluzione corretta (pragmatica)
-1️⃣ Metti l’informazione nel DB (o YAML)
-
-Esempio tabella TASK_CONFIG:
-
-task_uid	source	destination	post_action
-T01	SRC_A	T_FATTURE	UPDATE_REGISTRO
-T02	SRC_B	FILE_X	NULL
-
-Oppure:
-
-{
-  "post_actions": ["UPDATE_REGISTRO"]
-}
-
-2️⃣ Factory delle PostAction (unico punto con if)
-class PostTaskActionFactory:
-
-    def create(self, task_config) -> list[PostTaskAction]:
-        actions = []
-
-        for action_code in task_config.post_actions:
-            if action_code == "UPDATE_REGISTRO":
-                actions.append(UpdateRegistroAction())
-
-        return actions
+    @abstractmethod
+    def update(self, df: DataFrame, ctx: TaskContext):
+        pass
 
 
-👉 Qui l’if è giusto, perché:
+class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
-traduce config → oggetti
+    def update(self, df: DataFrame, ctx: TaskContext):
+        max_data = df.agg(
+            F.max("data_va").alias("max_data")
+        ).collect()[0]["max_data"]
 
-è il suo lavoro
+        ctx.registro_repo.upsert(
+            chiave=ctx.key,
+            last_id=ctx.task.id,
+            max_data_va=max_data
+        )
 
-3️⃣ _get_common_data() diventa neutra
-def _get_common_data():
-    task_config = self._repository.get_task_config(self._task.uid)
 
-    source = SourceFactory.create(task_config)
-    destination = SinkFactory.create(task_config)
-    post_actions = PostTaskActionFactory().create(task_config)
+class OnlyIdUpdateStrategy(RegistroUpdateStrategy):
 
-    return source, task_config.is_blocking, destination, post_actions
+    def update(self, df: DataFrame, ctx: TaskContext):
+        ctx.registro_repo.upsert(
+            chiave=ctx.key,
+            last_id=ctx.task.id
+        )
+
+class DominiUpdateStrategy(RegistroUpdateStrategy):
+
+    def update(self, df: DataFrame, ctx: TaskContext):
+        ctx.registro_repo.upsert(
+            chiave={"tabella": ctx.task.tabella},
+            last_id=ctx.task.id
+        )
+-------------------------
+class RegistroRepository:
+
+    def upsert(
+        self,
+        *,
+        chiave: dict,
+        last_id: int,
+        max_data_va: date | None = None
+    ):
+        sql = """
+        INSERT INTO registro (chiave, last_id, max_data_va, updated_at)
+        VALUES (:chiave, :last_id, :max_data_va, NOW())
+        ON CONFLICT (chiave)
+        DO UPDATE SET
+            last_id = EXCLUDED.last_id,
+            max_data_va = COALESCE(EXCLUDED.max_data_va, registro.max_data_va),
+            updated_at = NOW()
+        WHERE registro.last_id < EXCLUDED.last_id
+        """
+        self._execute(sql, {
+            "chiave": json.dumps(chiave),
+            "last_id": last_id,
+            "max_data_va": max_data_va
+        })
+
+
+-----dopo la df.write----
+for action in post_actions:
+    action.execute(df, ctx)
+
+
+

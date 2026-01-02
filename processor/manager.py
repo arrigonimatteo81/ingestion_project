@@ -7,7 +7,7 @@ from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
 from factories.source_factory import SourceFactory
 from helpers.query_renderer import QueryContext
-from metadata.loader.metadata_loader import ProcessorMetadata
+from metadata.loader.metadata_loader import ProcessorMetadata, CommonMetadata, MetadataLoader, TaskLogRepository
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
 from processor.sources.base import Source
@@ -23,7 +23,8 @@ class BaseProcessorManager (ABC):
         self._connection_string: str = extract_field_from_file(
             config_file, "CONNECTION_PARAMS"
         )
-        self._repository = ProcessorMetadata(self._connection_string)
+        self._repository = ProcessorMetadata(MetadataLoader(self._connection_string))
+        self._log_repository = TaskLogRepository(MetadataLoader(self._connection_string))
 
     def _get_common_data(self):
         """Retrieve common data needed by all processor types"""
@@ -78,13 +79,13 @@ class SparkProcessorManager (BaseProcessorManager):
     def start(self) -> OperationResult:
         try:
 
-            self._repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
+            self._log_repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
             task_source, task_is_blocking, task_destination = self._get_common_data()
             session = self._get_spark_session()
             df = task_source.to_dataframe(session)
             task_destination.write(df)
-            self._repository.insert_task_log_successful(self._task.uid, self._run_id,
+            self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
                                                         f"task {self._task.uid} concluso con successo", df.count())
             logger.debug(f"task {self._task.uid} concluso con successo")
 
@@ -92,10 +93,10 @@ class SparkProcessorManager (BaseProcessorManager):
 
         except Exception as exc:
             if task_is_blocking:
-                self._repository.insert_task_log_failed(self._task.uid, self._run_id,exc.__str__(),
+                self._log_repository.insert_task_log_failed(self._task.uid, self._run_id,exc.__str__(),
                                                  f"task {self._task.uid} in ERRORE!")
             else:
-                self._repository.insert_task_log_warning(self._task.uid, self._run_id, exc.__str__(),
+                self._log_repository.insert_task_log_warning(self._task.uid, self._run_id, exc.__str__(),
                                                        f"task {self._task.uid} in ERRORE ma non bloccante")
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))

@@ -5,7 +5,7 @@ from common.utils import extract_field_from_file, get_logger
 from factories.database_factory import DatabaseFactory
 from factories.partition_configuration_factory import PartitioningConfigurationFactory
 from helpers.query_renderer import QueryContext, QueryRenderer
-from metadata.loader.metadata_loader import ProcessorMetadata
+from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_file import TabFileSource
 from metadata.models.tab_jdbc import TabJDBCSource
 from processor.domain import SourceType, FileFormat
@@ -24,7 +24,7 @@ class SourceFactory:
     def create_source(source_type: str, source_id: str, config_file: str, query_ctx: QueryContext = None):
 
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
-        repository = ProcessorMetadata(connection_string)
+        repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
             if source_type.upper() == SourceType.JDBC.value:
                 jdbc_source :TabJDBCSource = repository.get_jdbc_source_info(source_id)
