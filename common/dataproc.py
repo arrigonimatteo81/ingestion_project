@@ -1,6 +1,7 @@
 from common.task_semaforo_payload import TaskSemaforoPayload
 from common.utils import get_logger, format_key_for_task_configuration
 from metadata.loader.metadata_loader import OrchestratorMetadata
+from metadata.models.tab_tasks import TaskSemaforo
 
 logger = get_logger(__name__)
 
@@ -8,15 +9,14 @@ logger = get_logger(__name__)
 
 class DataprocService:
     @staticmethod
-    def instantiate_task (task_id: str, repository: OrchestratorMetadata, run_id: str, config_file: str) -> dict:
-        logger.debug(f"Instantiating task: {task_id} ...")
-        task = repository.get_task(task_id)
-        payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.id, task.cod_abi, task.source_id, task.destination_id, task.cod_provenienza,
-                            task.num_periodo_rif, task.cod_gruppo, task.cod_colonna_valore, task.num_ambito,
-                            task.num_max_data_va)
-        task_type = repository.get_task_configuration(format_key_for_task_configuration(task.source_id,task.cod_abi,task.cod_provenienza))
+    def instantiate_task (task: TaskSemaforo, repository: OrchestratorMetadata, run_id: str, config_file: str) -> dict:
+        logger.debug(f"Instantiating task: {task} ...")
+        payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.source_id, task.destination_id, task.tipo_caricamento,
+                            task.key, task.query_params)
+        task_type = repository.get_task_configuration(format_key_for_task_configuration(task.key.get("cod_tabella"),
+                                                                                        task.key.get("cod_abi"),task.key.get("cod_provenienza")))
         return {
-                "step_id": f"step-{task_id}",
+                "step_id": f"step-{task.uid}",
                 "pyspark_job": {
                     "main_python_file_uri": task_type.main_python_file_uri,
                     "args": [
@@ -38,10 +38,10 @@ class DataprocService:
 
 
     @staticmethod
-    def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: set[str]):
+    def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo]):
         logger.debug("Creating todo list...")
         list_of_tasks=[]
-        for task_id in tasks:
-            list_of_tasks.append(DataprocService.instantiate_task(task_id, orchestrator_repository, run_id, config_file))
+        for task in tasks:
+            list_of_tasks.append(DataprocService.instantiate_task(task, orchestrator_repository, run_id, config_file))
         return list_of_tasks
 

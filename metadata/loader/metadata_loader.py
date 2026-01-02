@@ -8,7 +8,7 @@ from metadata.models.tab_config import Config
 from metadata.models.tab_groups import Group
 from metadata.models.tab_log import TaskLog
 from metadata.models.tab_tasks import Task, TaskType, TaskSemaforo
-from processor.domain import TaskState
+from processor.domain import TaskState, ProcessorType
 
 logger = get_logger(__name__)
 
@@ -61,10 +61,10 @@ class OrchestratorMetadata:
     def __init__(self, loader: MetadataLoader):
         self._loader = loader
 
-    def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
-        sql = f"SELECT uid,cod_gruppo FROM public.tab_tasks_semaforo where cod_gruppo = ANY(%s)"
+    def get_all_tasks_in_group(self, groups: [str]) -> [TaskSemaforo]:
+        sql = f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.semaforo_ready where cod_gruppo = ANY(%s)'
         rows = self._loader.fetchall(sql, (groups,))
-        return [Group(*r) for r in rows]
+        return [TaskSemaforo(*r) for r in rows]
 
     def get_task(self, task_id) -> TaskSemaforo:
         sql=f"SELECT * FROM public.tab_tasks_semaforo where uid = %s"
@@ -94,6 +94,8 @@ class ProcessorMetadata:
     def get_task_processor_type(self, task_id: str) -> str:
         sql ="select processor_type from public.tab_task_configs where tab_task_configs.name= %s"
         row = self._loader.fetchone(sql, (task_id,))
+        if row is None:
+            return ProcessorType.SPARK.value
         return row[0]
 
     def get_source_info(self, task_id: str) -> (str,str):

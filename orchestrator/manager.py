@@ -4,6 +4,7 @@ from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
 from metadata.loader.metadata_loader import OrchestratorMetadata, MetadataLoader
+from metadata.models.tab_tasks import TaskSemaforo
 
 logger = get_logger(__name__)
 
@@ -33,7 +34,7 @@ class OrchestratorManager:
         logger.info(
             "Fetching tasks in groups " + ", ".join(self._groups) + "..."
         )
-        tasks: set[str] = self._fetch_tasks_ids_in_groups(self._groups)
+        tasks: [TaskSemaforo] = self._fetch_tasks_ids_in_groups(self._groups)
         if len(tasks) == 0:
             err_mex = f"No tasks found in groups '{self._groups}'"
             logger.error(err_mex)
@@ -63,10 +64,9 @@ class OrchestratorManager:
             return OperationResult(successful=True, description="Tutto ok")
 
 
-    def _fetch_tasks_ids_in_groups(self, groups: [str]) -> set[str]:
+    def _fetch_tasks_ids_in_groups(self, groups: [str]) -> [TaskSemaforo]:
         str_groups=",".join(groups)
         logger.debug(f"Retrieving tasks in groups {str_groups}")
-        query_tasks = self._repository.get_all_tasks_in_group(groups)
-        tasks: set[str] = {item.task_id for item in query_tasks}
+        tasks = self._repository.get_all_tasks_in_group(groups)
         return tasks
 

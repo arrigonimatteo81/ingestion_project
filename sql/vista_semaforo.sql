@@ -1,15 +1,12 @@
-CREATE TABLE public.registro_mensile (
-	id_sem int4 NOT NULL,
-	cod_abi int4 NULL,
-	cod_tabella varchar(128) NOT NULL,
-	cod_provenienza bpchar(2) NULL,
-	max_datava bigint NULL,
-	tms_ultima_modifica timestamp NULL,
-	CONSTRAINT pk_registro_mensile PRIMARY KEY (id_sem)
+CREATE TABLE public.tab_registro_mensile (
+    chiave JSONB PRIMARY KEY,
+    last_id BIGINT NOT NULL,
+    max_data_va INT4,
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE public.semaforo_mensile (
-	id int4 NOT NULL,
+	id int4 PRIMARY KEY,
 	cod_abi int4 NULL,
 	periodo_rif int4 NULL,
 	tabella varchar(128) NOT NULL,
@@ -21,35 +18,54 @@ CREATE TABLE public.semaforo_mensile (
 	o_carico timestamp(3) NULL,
 	stato int4 NULL,
 	utente varchar(255) NULL,
-	o_carico_sys timestamp(3) NULL,
-	CONSTRAINT pk_semaforo_mensile PRIMARY KEY (id)
+	o_carico_sys timestamp(3) NULL
 );
 
-insert into public.tab_tasks_semaforo(
-    id,
-    cod_abi,
-    source_id,
-    destination_id,
-    cod_provenienza,
-    num_periodo_rif,
-    cod_gruppo,
-    cod_colonna_valore,
-    num_ambito,
-    num_max_data_va
-)
+create view public.semaforo_ready as
 select
-sm.id id_sem,
-sm.cod_abi as cod_abi,
-sm.tabella as cod_tabella,
-sm.provenienza as cod_provenienza,
-sm.periodo_rif as num_periodo_rif,
-sm.tipo_caricamento as cod_tipo_caricamento,
-sm.colonna_valore as cod_colonna_valore,
-sm.ambito as num_ambito,
-coalesce(rm.max_datava, 20000101000000) as num_max_datava
-from public.semaforo_mensile sm
-left join public.registro_mensile rm
-on sm.cod_abi = rm.cod_abi
-and sm.tabella = rm.cod_tabella
-and sm.provenienza = rm.cod_provenienza
-where sm.id>coalesce(rm.id_sem,0)
+	gen_random_uuid() as uid,s.tabella as source_id,s.tabella as destination_id,s.tipo_caricamento,s.key,
+	case
+			when tipo_caricamento = 'DOMINI' then
+            	jsonb_build_object('id',id)
+			else
+            	jsonb_build_object('id',id,
+            					   'cod_abi',cod_abi,
+								   'cod_provenienza',provenienza,
+								   'num_periodo_rif',periodo_rif,
+								   'cod_colonna_valore',colonna_valore,
+								   'num_ambito',ambito,
+								   'max_data_va', coalesce(max_data_va,20000101)
+            )
+		end as query_param
+from
+	(
+	select
+		id,
+		tabella,
+		tipo_caricamento ,
+		colonna_valore,
+		ambito,cod_abi,provenienza,periodo_rif,
+		case
+			when tipo_caricamento = 'DOMINI' then
+            	jsonb_build_object('tabella',tabella)
+			else
+            	jsonb_build_object('cod_abi',cod_abi,
+								   'tabella',tabella,
+								   'provenienza',provenienza
+            )
+		end as key
+	from
+		public.semaforo_mensile)s
+left join public.tab_registro_mensile r
+    on
+	r.chiave = s.key
+where
+	r.last_id is null
+	or s.id > r.last_id;
+
+GRANT SELECT ON TABLE public.semaforo_ready TO fdir_app;
+
+
+
+
+

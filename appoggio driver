@@ -1,12 +1,6 @@
 source .venv/bin/activate
 python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
 ----------------------------------
-CREATE TABLE registro (
-    chiave JSONB PRIMARY KEY,
-    last_id BIGINT NOT NULL,
-    max_data_va DATE,
-    updated_at TIMESTAMP NOT NULL DEFAULT now()
-);
 ------------query di upsert in registro-------------
 INSERT INTO registro (
     chiave,
@@ -26,33 +20,34 @@ DO UPDATE SET
     max_data_va = EXCLUDED.max_data_va,
     updated_at = NOW()
 WHERE registro.last_id < EXCLUDED.last_id;
-------questa è semaforo_norm-----------
-SELECT
-    id,
-    tabella,
-    tipo_caricamento,
-    CASE
-        WHEN tipo_caricamento = 'DOMINI' THEN
-            jsonb_build_object('tabella', tabella)
-        ELSE
-            jsonb_build_object(
-                'cod_abi', cod_abi,
-                'tabella', tabella,
-                'provenienza', provenienza
-            )
-    END AS chiave,
-    data_va
-FROM stg_semaforo_raw;
 -------tabella che l'orchestrator deve leggere e confronta semaforo/registro con chiave json (diverse per tipo_caricamento)----------------------------
-CREATE OR REPLACE TABLE semaforo_ready AS
-SELECT
-    s.*
-FROM semaforo_norm s
-LEFT JOIN registro r
-    ON r.chiave = s.chiave
-WHERE
-    r.last_id IS NULL
-    OR s.id > r.last_id;
+select
+	s.*
+from
+	(
+	select
+		id,
+		tabella,
+		tipo_caricamento ,
+		colonna_valore,
+		ambito,
+		case
+			when tipo_caricamento = 'DOMINI' then
+            	jsonb_build_object('tabella',tabella)
+			else
+            	jsonb_build_object('cod_abi',cod_abi,
+								   'tabella',tabella,
+								   'provenienza',provenienza
+            )
+		end as chiave
+	from
+		public.semaforo_mensile)s
+left join public.tab_registro_mensile r
+    on
+	r.chiave = s.chiave
+where
+	r.last_id is null
+	or s.id > r.last_id;
 ------class TaskSemaforo-------------
 from dataclasses import dataclass
 from typing import Dict

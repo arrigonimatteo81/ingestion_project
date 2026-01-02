@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from google.cloud.dataproc_v1 import LoggingConfig
+from typing import Dict
 
 class TaskType:
 
@@ -164,16 +165,13 @@ class Task:
     config_profile: str
     is_blocking: bool = True
 
-@dataclass
+
+
+@dataclass(frozen=True)
 class TaskSemaforo:
     uid: str
-    id: int
-    cod_abi: int
     source_id: str
     destination_id: str
-    cod_provenienza: str
-    num_periodo_rif: int
-    cod_gruppo: str
-    cod_colonna_valore: str
-    num_ambito: int
-    num_max_data_va: int
+    tipo_caricamento: str
+    key: Dict
+    query_params: Dict
