@@ -26,7 +26,7 @@ class TaskSemaforoPayload:
     def from_json(cls, json_str: str) -> "TaskSemaforoPayload":
         return cls(**json.loads(json_str))
 
-    def to_domain(self) -> "TaskSemaforo":
+    def to_domain(self) -> TaskSemaforo:
         return TaskSemaforo(
             uid=self.uid,
             source_id=self.source_id,

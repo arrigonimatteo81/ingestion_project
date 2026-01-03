@@ -1,8 +1,8 @@
+import unittest
+
 from common.dataproc import DataprocService
 from metadata.loader.metadata_loader import OrchestratorMetadata
-from metadata.models.tab_groups import Group
-from metadata.models.tab_tasks import Task, TaskType, TaskSemaforo
-import unittest
+from metadata.models.tab_tasks import TaskType, TaskSemaforo
 
 TEST_RUN_ID = "20250115_1013"
 TEST_APPLICATION_CONF = "application.conf"
@@ -12,16 +12,16 @@ class MockOrchestratorRepository(OrchestratorMetadata):
     def __init__(self) -> None:
         pass
 
-    def get_all_tasks_in_group(self, groups: [str]) -> [Group]:
-        return [Group("DM", "GRP1"), Group("KPI1", "GRP1"),
-                Group("KPI2", "GRP1"), Group("REPORT1", "GRP1"),
-                Group("REPORT2", "GRP1")]
+    """def get_all_tasks_in_group(self,groups: [str]) -> [TaskSemaforo]:
+        return [TaskSemaforo("uid1","source_1","destination_1","gruppo_1",{"k1_1":"key1_1","k2":"key2_1"}, {"p1_1":"param1_1", "p2_1": "param2_1"}),
+                TaskSemaforo("uid2","source_2","destination_2","gruppo_1",{"k1_2":"key1_2","k2":"key2_2"}, {"p1_2":"param1_2", "p2_2": "param2_2"}),]
 
     def get_task(self, task_id):
-        return TaskSemaforo("uid", 1 , 3239, "source_id", "destination_id","PR",202512,"gruppo","colonna_valore",1,20251230090600)
-
+        return TaskSemaforo("uid","source_id", "destination_id", "gruppo", {"cod_provenienza":"PR", "cod_abi": "3239", "cod_tabella":"tabella"},
+                            {"cod_colonna_valore" :"colonna_valore", "max_data_va": "20251230090600"})
+"""
     def get_task_configuration(self, config_task):
-        return TaskType("03239-source_id-PR", "descrizione profilo di test", "main_file_python.py",
+        return TaskType("source_id-03239-PR", "descrizione profilo di test", "main_file_python.py",
                         ["additional_file_1.py", "additional_file_2.py"], ["jar_file_uri"], ["additional_jar_file_uri"])
 
 
@@ -31,7 +31,7 @@ class TestDataprocService(unittest.TestCase):
 
     def test_instantiate_task(self):
         task1_job = DataprocService.instantiate_task(
-            task_id="uid_1",
+            task=TaskSemaforo('uid1','source_1','destination_1','gruppo_1',{'k1_1':'key1_1','k2':'key2_1'}, {'p1_1':'param1_1', 'p2_1': 'param2_1'}),
             repository=self.orchestrator_repo,
             run_id=TEST_RUN_ID,
             config_file=TEST_APPLICATION_CONF,
@@ -42,7 +42,7 @@ class TestDataprocService(unittest.TestCase):
         )  # asserts exactly the correct number of jobs are present
         task1_job = template_request["jobs"][0]"""
         self.assertEqual(
-            task1_job.get("step_id"), "step-uid_1"
+            task1_job.get("step_id"), "step-uid1"
         )  # assert correct task id
         self.assertEqual(
             task1_job.get("pyspark_job").get("main_python_file_uri"),
@@ -58,12 +58,30 @@ class TestDataprocService(unittest.TestCase):
             task1_job.get("pyspark_job").get("file_uris"), ["additional_jar_file_uri"]
         )
 
+#test ripetuto anche nella test_payload,. qui dal punto di vista di dataproc, di la dal punto di vista puramente di json
+    def test_task_payload(self):
+        task1_job = DataprocService.instantiate_task(
+            task=TaskSemaforo('uid1','source_1','destination_1','gruppo_1',{'k1_1':'key1_1','k2':'key2_1'}, {'p1_1':'param1_1', 'p2_1': 'param2_1'}),
+            repository=self.orchestrator_repo,
+            run_id=TEST_RUN_ID,
+            config_file=TEST_APPLICATION_CONF,
+        )
+        self.assertEqual(task1_job.get("pyspark_job").get("args")[3],
+                         '{"uid": "uid1", "source_id": "source_1", "destination_id": "destination_1", "tipo_caricamento": "gruppo_1", "key": {"k1_1": "key1_1", "k2": "key2_1"}, "query_params": {"p1_1": "param1_1", "p2_1": "param2_1"}}')
+
     def test_create_to_do_list_of_one_item(self):
         todo_list = DataprocService.create_todo_list(TEST_APPLICATION_CONF, self.orchestrator_repo, TEST_RUN_ID,
-                                                     {"id_task_1"})
+                                                     [TaskSemaforo("uid1", "source_1", "destination_1", "gruppo_1",
+                                                                   {"k1_1": "key1_1", "k2": "key2_1"},
+                                                                   {"p1_1": "param1_1", "p2_1": "param2_1"})])
         self.assertEqual(1, len(todo_list))
 
     def test_create_to_do_list_of_two_items(self):
         todo_list = DataprocService.create_todo_list(TEST_APPLICATION_CONF, self.orchestrator_repo, TEST_RUN_ID,
-                                                     {"id_task_1", "id_task_2"})
+                                                     [TaskSemaforo("uid1", "source_1", "destination_1", "gruppo_1",
+                                                                   {"k1_1": "key1_1", "k2": "key2_1"},
+                                                                   {"p1_1": "param1_1", "p2_1": "param2_1"}),
+                                                      TaskSemaforo("uid2", "source_2", "destination_2", "gruppo_1",
+                                                                   {"k1_2": "key1_2", "k2": "key2_2"},
+                                                                   {"p1_2": "param1_2", "p2_2": "param2_2"}), ])
         self.assertEqual(2, len(todo_list))
