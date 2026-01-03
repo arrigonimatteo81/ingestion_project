@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
-
 from pyspark.sql import SparkSession
-
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
 from factories.source_factory import SourceFactory
-from helpers.query_renderer import QueryContext
-from metadata.loader.metadata_loader import ProcessorMetadata, CommonMetadata, MetadataLoader, TaskLogRepository
+from helpers.query_resolver import TaskContext
+from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, TaskLogRepository, \
+    RegistroMetadata
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
 from processor.sources.base import Source
@@ -31,8 +30,8 @@ class BaseProcessorManager (ABC):
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
         source_id,source_type = self._repository.get_source_info(self._task.uid)
-        query_ctx = self._compose_query_context()
-        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file, query_ctx)
+        ctx = self._compose_task_context()
+        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file, ctx)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
         )
@@ -50,20 +49,17 @@ class BaseProcessorManager (ABC):
 
         return task_source, task_is_blocking, task_destination
 
-    def _compose_query_context(self):
-        query_ctx = QueryContext(
-            cod_abi=self._task.cod_abi,
-            cod_provenienza=self._task.cod_provenienza,
-            num_periodo_rif=self._task.num_periodo_rif,
-            cod_colonna_valore=self._task.cod_colonna_valore,
-            num_ambito=self._task.num_ambito,
-            num_max_data_va=self._task.num_max_data_va,
-        )
-        return query_ctx
-
     @abstractmethod
     def start(self) -> OperationResult:
         pass
+
+    def _compose_task_context(self) -> TaskContext:
+        return TaskContext(
+            self._task,
+            key=self._task.key,
+            query_params=self._task.query_params,
+            registro_repo=RegistroMetadata(MetadataLoader(self._connection_string))
+        )
 
 
 class SparkProcessorManager (BaseProcessorManager):

@@ -1,3 +1,5 @@
+import json
+
 import psycopg2
 from datetime import datetime
 
@@ -136,6 +138,33 @@ class ProcessorMetadata:
         sql = "SELECT cod_gruppo FROM public.tab_tasks_semaforo where uid = %s"
         row = self._loader.fetchone(sql, (task_id,))
         return row[0]
+
+class RegistroMetadata:
+    def __init__(self, loader: MetadataLoader):
+        self._loader = loader
+
+    def upsert(
+            self,
+            *,
+            chiave: dict,
+            last_id: int,
+            max_data_va: int = None
+    ):
+        sql = """
+        INSERT INTO registro (chiave, last_id, max_data_va, updated_at)
+        VALUES (:chiave, :last_id, :max_data_va, NOW())
+        ON CONFLICT (chiave)
+        DO UPDATE SET
+            last_id = EXCLUDED.last_id,
+            max_data_va = COALESCE(EXCLUDED.max_data_va, registro.max_data_va),
+            updated_at = NOW()
+        WHERE registro.last_id < EXCLUDED.last_id
+        """
+        self._loader.execute(sql, {
+            "chiave": json.dumps(chiave),
+            "last_id": last_id,
+            "max_data_va": max_data_va
+        })
 
 class TaskLogRepository:
 

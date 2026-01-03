@@ -1,6 +1,6 @@
 import unittest
 
-from helpers.query_renderer import QueryContext, QueryRenderer
+from helpers.query_resolver import QueryContext, QueryRenderer
 
 
 class TestQueryRenderer(unittest.TestCase):
