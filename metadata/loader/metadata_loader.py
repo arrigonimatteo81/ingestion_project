@@ -151,8 +151,10 @@ class RegistroMetadata:
             max_data_va: int = None
     ):
         sql = """
-        INSERT INTO registro (chiave, last_id, max_data_va, updated_at)
-        VALUES (:chiave, :last_id, :max_data_va, NOW())
+        INSERT INTO public.tab_registro_mensile (chiave, last_id, max_data_va, updated_at)
+        VALUES (%(chiave)s,
+        %(last_id)s,
+        %(max_data_va)s,, NOW())
         ON CONFLICT (chiave)
         DO UPDATE SET
             last_id = EXCLUDED.last_id,
