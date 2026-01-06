@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 class SourceFactory:
 
     @staticmethod
-    def create_source(source_type: str, source_id: str, config_file: str, ctx: TaskContext = None):
+    def create_source(source_type: str, source_id: str, config_file: str):
 
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))

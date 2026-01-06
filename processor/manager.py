@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
-from factories.registro_update_strategy import RegistroUpdateStrategyFactory
+from factories.registro_update_strategy_factory import RegistroUpdateStrategyFactory
 from factories.source_factory import SourceFactory
 from helpers.query_resolver import TaskContext
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, TaskLogRepository, \
