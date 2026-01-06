@@ -3,6 +3,7 @@ from pyspark.sql import SparkSession
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
+from factories.registro_update_strategy import RegistroUpdateStrategyFactory
 from factories.source_factory import SourceFactory
 from helpers.query_resolver import TaskContext
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, TaskLogRepository, \
@@ -10,9 +11,9 @@ from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, T
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
 from processor.sources.base import Source
+from processor.update_strategy.post_task_action import UpdateRegistroAction
 
 logger = get_logger(__name__)
-
 
 class BaseProcessorManager (ABC):
     def __init__(self,run_id: str, task: TaskSemaforo, config_file: str):
@@ -47,7 +48,13 @@ class BaseProcessorManager (ABC):
             f"Destination retrieved for task_id={self._task.uid}: {task_destination}"
         )
 
-        return task_source, task_is_blocking, task_destination
+        strategy = RegistroUpdateStrategyFactory().create(self._task.tipo_caricamento)
+
+        post_actions = [
+            UpdateRegistroAction(strategy)
+        ]
+        
+        return task_source, task_is_blocking, task_destination, post_actions
 
     @abstractmethod
     def start(self) -> OperationResult:
@@ -77,10 +84,12 @@ class SparkProcessorManager (BaseProcessorManager):
 
             self._log_repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination = self._get_common_data()
+            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
             session = self._get_spark_session()
             df = task_source.to_dataframe(session)
             task_destination.write(df)
+            for action in post_actions:
+                action.execute(df, ctx)
             self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
                                                         f"task {self._task.uid} concluso con successo", df.count())
             logger.debug(f"task {self._task.uid} concluso con successo")
