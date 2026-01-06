@@ -16,7 +16,7 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
     def update(self, df: DataFrame, ctx: TaskContext):
         max_data = df.agg(
-            F.max("data_va").alias("max_data")
+            F.max("num_data_va").alias("max_data")
         ).collect()[0]["max_data"]
 
         ctx.registro_repo.upsert(

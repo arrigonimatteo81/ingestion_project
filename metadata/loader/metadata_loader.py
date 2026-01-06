@@ -64,7 +64,8 @@ class OrchestratorMetadata:
         self._loader = loader
 
     def get_all_tasks_in_group(self, groups: [str]) -> [TaskSemaforo]:
-        sql = f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.semaforo_ready where cod_gruppo = ANY(%s)'
+        sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.semaforo_ready '
+               f'where tipo_caricamento = ANY(%s)')
         rows = self._loader.fetchall(sql, (groups,))
         return [TaskSemaforo(*r) for r in rows]
 
@@ -101,7 +102,7 @@ class ProcessorMetadata:
         return row[0]
 
     def get_source_info(self, task_id: str) -> (str,str):
-        sql=("SELECT b.source_id, b.source_type FROM public.tab_tasks_semaforo a join public.tab_task_sources b "
+        sql=("SELECT b.source_id, b.source_type FROM public.semaforo_ready a join public.tab_task_sources b "
             "on a.source_id = b.source_id  where a.uid =%s")
         row = self._loader.fetchone(sql, (task_id,))
         return row
@@ -119,7 +120,7 @@ class ProcessorMetadata:
         return TabFileSource(*row)
 
     def get_destination_info(self, task_id: str) -> (str,str):
-        sql = (f"SELECT b.destination_id, b.destination_type FROM public.tab_tasks_semaforo a join public.tab_task_destinations b "
+        sql = (f"SELECT b.destination_id, b.destination_type FROM public.semaforo_ready a join public.tab_task_destinations b "
                     f"on a.destination_id = b.destination_id where a.uid = %s")
         row = self._loader.fetchone(sql, (task_id,))
         return row
@@ -154,13 +155,13 @@ class RegistroMetadata:
         INSERT INTO public.tab_registro_mensile (chiave, last_id, max_data_va, updated_at)
         VALUES (%(chiave)s,
         %(last_id)s,
-        %(max_data_va)s,, NOW())
+        %(max_data_va)s, NOW())
         ON CONFLICT (chiave)
         DO UPDATE SET
             last_id = EXCLUDED.last_id,
-            max_data_va = COALESCE(EXCLUDED.max_data_va, registro.max_data_va),
+            max_data_va = COALESCE(EXCLUDED.max_data_va, tab_registro_mensile.max_data_va),
             updated_at = NOW()
-        WHERE registro.last_id < EXCLUDED.last_id
+        WHERE tab_registro_mensile.last_id < EXCLUDED.last_id
         """
         self._loader.execute(sql, {
             "chiave": json.dumps(chiave),
@@ -226,7 +227,7 @@ class TaskLogRepository:
         if update_ts is None:
             update_ts = datetime.now()
 
-        group = self.get_task_group(task_id)
+        #group = self.get_task_group(task_id)
 
         sql = """
         INSERT INTO public.tab_task_logs (
@@ -258,7 +259,7 @@ class TaskLogRepository:
             "description": task_log_description,
             "error_message": error_message,
             "update_ts": update_ts,
-            "task_group": group,
+            "task_group": "group",
             "rows_affected": rows_affected,
         }
 

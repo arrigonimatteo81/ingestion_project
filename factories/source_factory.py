@@ -28,18 +28,28 @@ class SourceFactory:
                 if jdbc_source.tablename:
                     return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
                 elif jdbc_source.query_text:
-                    query_text = QueryResolver.resolve(jdbc_source.query_text, ctx)
-                    if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
+                    #if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
+                    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
+                                           jdbc_source.url, jdbc_source.query_text,
+                                           jdbc_source.partitioning_expression,jdbc_source.num_partitions)
+                    #else:
+                    #return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
+                    #                       jdbc_source.url, jdbc_source.query_text)
+                                               #(
+                                               #f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} "
+                                               #f"from ({query_text}) tab ) as subquery"), partitioning_cfg)
 
-                        db_factory: DatabaseFactory = DatabaseFactory({"user": jdbc_source.username, "password": jdbc_source.pwd, "url": jdbc_source.url})
-                        pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
-                        partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(jdbc_source.partitioning_expression,
-                                                                                                                   jdbc_source.num_partitions,query_text)
-                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
-                                               jdbc_source.url,(f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} "
-                                                 f"from ({query_text}) tab ) as subquery"), partitioning_cfg)
-                    else:
-                        return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, f"({query_text}) as subquery")
+                    #query_text = QueryResolver.resolve(jdbc_source.query_text, ctx)
+                    #if jdbc_source.partitioning_expression and jdbc_source.num_partitions:
+
+                        #db_factory: DatabaseFactory = DatabaseFactory({"user": jdbc_source.username, "password": jdbc_source.pwd, "url": jdbc_source.url})
+                        #pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
+                        #partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(jdbc_source.partitioning_expression,
+                        #                                                                                           jdbc_source.num_partitions,query_text)
+                        #return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
+                        #                       jdbc_source.url,(f"(select *, {jdbc_source.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} from ({query_text}) tab ) as subquery"), partitioning_cfg)"""
+                    #else:
+                    #    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, f"({query_text}) as subquery")
             elif source_type.upper() == SourceType.FILE.value:
                 file_source: TabFileSource = repository.get_file_source_info(source_id)
                 if file_source.file_type.upper() == FileFormat.EXCEL.value:

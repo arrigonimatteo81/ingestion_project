@@ -5,8 +5,8 @@ from processor.update_strategy.registro_update_strategy import RegistroUpdateStr
 class RegistroUpdateStrategyFactory:
 
     def create(self, tipo_caricamento: str) -> RegistroUpdateStrategy:
-        if tipo_caricamento in ("CLIENTI", "RAPPORTI"):
+        if tipo_caricamento.upper() in ("CLIENTI", "RAPPORTI","CLIENTI_"):
             return IdAndDateUpdateStrategy()
-        if tipo_caricamento in ("DATI", "DOMINI"):
+        if tipo_caricamento.upper() in ("DATI", "DOMINI"):
             return OnlyIdUpdateStrategy()
         raise ValueError(tipo_caricamento)

@@ -31,8 +31,7 @@ class BaseProcessorManager (ABC):
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
         source_id,source_type = self._repository.get_source_info(self._task.uid)
-        ctx = self._compose_task_context()
-        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file, ctx)
+        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
         )
@@ -60,14 +59,6 @@ class BaseProcessorManager (ABC):
     def start(self) -> OperationResult:
         pass
 
-    def _compose_task_context(self) -> TaskContext:
-        return TaskContext(
-            self._task,
-            key=self._task.key,
-            query_params=self._task.query_params,
-            registro_repo=RegistroMetadata(MetadataLoader(self._connection_string))
-        )
-
 
 class SparkProcessorManager (BaseProcessorManager):
 
@@ -85,8 +76,14 @@ class SparkProcessorManager (BaseProcessorManager):
             self._log_repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
             task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+            ctx = TaskContext(
+                self._task,
+                key=self._task.key,
+                query_params=self._task.query_params,
+                registro_repo=RegistroMetadata(MetadataLoader(self._connection_string))
+            )
             session = self._get_spark_session()
-            df = task_source.to_dataframe(session)
+            df = task_source.to_dataframe(session, ctx)
             task_destination.write(df)
             for action in post_actions:
                 action.execute(df, ctx)
