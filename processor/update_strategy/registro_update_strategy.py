@@ -34,6 +34,11 @@ class OnlyIdUpdateStrategy(RegistroUpdateStrategy):
             last_id=ctx.task.query_params.get("id")
         )
 
+class NoOpRegistroUpdateStrategy(RegistroUpdateStrategy):
+    def update(self, df, ctx):
+        # intenzionalmente vuoto
+        return
+
 """class DominiUpdateStrategy(RegistroUpdateStrategy):
 
     def update(self, df: DataFrame, ctx: TaskContext):

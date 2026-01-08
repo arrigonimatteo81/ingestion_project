@@ -1,15 +1,13 @@
 import json
-
-import psycopg2
 from datetime import datetime
 
+import psycopg2
+
 from common.utils import get_logger
+from metadata.models.tab_config import Config
 from metadata.models.tab_file import TabFileSource, TabFileDest
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
-from metadata.models.tab_config import Config
-from metadata.models.tab_groups import Group
-from metadata.models.tab_log import TaskLog
-from metadata.models.tab_tasks import Task, TaskType, TaskSemaforo
+from metadata.models.tab_tasks import TaskType, TaskSemaforo
 from processor.domain import TaskState, ProcessorType
 
 logger = get_logger(__name__)
@@ -64,7 +62,7 @@ class OrchestratorMetadata:
         self._loader = loader
 
     def get_all_tasks_in_group(self, groups: [str]) -> [TaskSemaforo]:
-        sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.semaforo_ready '
+        sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.tab_semaforo_ready '
                f'where tipo_caricamento = ANY(%s)')
         rows = self._loader.fetchall(sql, (groups,))
         return [TaskSemaforo(*r) for r in rows]
@@ -82,6 +80,7 @@ class OrchestratorMetadata:
         )
         if row is None:
             return TaskType.default()
+        #print(f"MATTEO {row}")
         return TaskType(*row)
 
 class ProcessorMetadata:
@@ -102,7 +101,7 @@ class ProcessorMetadata:
         return row[0]
 
     def get_source_info(self, task_id: str) -> (str,str):
-        sql=("SELECT b.source_id, b.source_type FROM public.semaforo_ready a join public.tab_task_sources b "
+        sql=("SELECT b.source_id, b.source_type FROM public.tab_semaforo_ready a join public.tab_task_sources b "
             "on a.source_id = b.source_id  where a.uid =%s")
         row = self._loader.fetchone(sql, (task_id,))
         return row
@@ -120,13 +119,13 @@ class ProcessorMetadata:
         return TabFileSource(*row)
 
     def get_destination_info(self, task_id: str) -> (str,str):
-        sql = (f"SELECT b.destination_id, b.destination_type FROM public.semaforo_ready a join public.tab_task_destinations b "
+        sql = (f"SELECT b.destination_id, b.destination_type FROM public.tab_semaforo_ready a join public.tab_task_destinations b "
                     f"on a.destination_id = b.destination_id where a.uid = %s")
         row = self._loader.fetchone(sql, (task_id,))
         return row
 
     def get_jdbc_dest_info(self, destination_id: str) -> TabJDBCDest:
-        sql = "SELECT url,username,pwd,driver,tablename, overwrite FROM public.tab_jdbc_destinations where destination_id = %s"
+        sql = "SELECT url,username,pwd,driver,tablename, columns, overwrite FROM public.tab_jdbc_destinations where destination_id = %s"
         row = self._loader.fetchone(sql, (destination_id,))
         return TabJDBCDest(*row)
 

@@ -16,3 +16,7 @@ class Destination:
     @abstractmethod
     def write(self, df: DataFrame):
         pass
+
+    @abstractmethod
+    def write_rows(self, rows):
+        raise NotImplementedError

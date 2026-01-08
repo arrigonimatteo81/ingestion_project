@@ -2,6 +2,8 @@ from pyspark.sql import SparkSession, DataFrame
 
 from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.utils import get_logger
+from db.database import DbConcrete
+from db.database_aware import DatabaseAware
 from factories.database_factory import DatabaseFactory
 from factories.partition_configuration_factory import PartitioningConfigurationFactory
 from helpers.query_resolver import TaskContext, QueryResolver
@@ -11,7 +13,7 @@ from processor.sources.base import Source
 
 logger = get_logger(__name__)
 
-class TableJDBCSource(Source, JDBCTable):
+class TableJDBCSource(Source, JDBCTable, DatabaseAware):
     def __init__(
             self,
             username: str,
@@ -22,6 +24,7 @@ class TableJDBCSource(Source, JDBCTable):
     ):
         Source.__init__(self)
         JDBCTable.__init__(self, username, password, driver, url, dbtable)
+        #DatabaseAware.__init__(self, username, password, url)
 
     def to_dataframe(self, spark: SparkSession, ctx: TaskContext = None) -> DataFrame:
         df_reader = (
@@ -34,7 +37,7 @@ class TableJDBCSource(Source, JDBCTable):
         )
         return df_reader.load()
 
-class QueryJDBCSource(Source, JDBCQuery):
+class QueryJDBCSource(Source, JDBCQuery, DatabaseAware):
 
     def __init__(
             self,
@@ -49,6 +52,7 @@ class QueryJDBCSource(Source, JDBCQuery):
 
         Source.__init__(self)
         JDBCQuery.__init__(self, username, password, driver, url, query)
+        #DatabaseAware.__init__(self,username,password,url)
         self.partitioning_expression = partitioning_expression
         self.num_partitions = num_partitions
 
@@ -57,9 +61,9 @@ class QueryJDBCSource(Source, JDBCQuery):
         query_text = QueryResolver.resolve(self.query, ctx)
 
         if self.partitioning_expression and self.num_partitions:
-            #print(f"MATTEO2: (select *, {self.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} from ({query_text}) tab ) as subquery")
-            db_factory: DatabaseFactory = DatabaseFactory({"user": self.username, "password": self.password, "url": self.url})
-            pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
+            #db_factory: DatabaseFactory = DatabaseFactory({"user": self.username, "password": self.password, "url": self.url})
+            #pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(db_factory)
+            pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(self.create_database())
             partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(self.partitioning_expression,
                                                                                                        self.num_partitions,
                                                                                                        query_text)
@@ -84,3 +88,10 @@ class QueryJDBCSource(Source, JDBCQuery):
 
         return df_reader
 
+    def fetch_all(self, ctx: TaskContext = None):
+        query_text = QueryResolver.resolve(self.query, ctx)
+        db = self.create_database()
+        db.connect()
+        res = db.fetch_all(query_text)
+        db.close()
+        return res

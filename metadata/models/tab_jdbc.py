@@ -23,11 +23,12 @@ class TabJDBCDest:
     pwd: str
     driver: str
     tablename: str
+    columns: [str]
     overwrite: bool = False
 
     def __repr__(self):
         return (f"TabJDBCDest(url={self.url},username={self.username},pwd={self.pwd},driver={self.driver},"
-                f"tablename={self.tablename}, overwrite={self.overwrite})")
+                f"tablename={self.tablename}, overwrite={self.overwrite}, columns={self.columns})")
 
 class JDBC:
 

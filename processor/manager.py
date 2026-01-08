@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pyspark.sql import SparkSession
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
+from factories.database_factory import DatabaseFactory
 from factories.destination_factory import DestinationFactory
 from factories.registro_update_strategy_factory import RegistroUpdateStrategyFactory
 from factories.source_factory import SourceFactory
@@ -89,6 +90,40 @@ class SparkProcessorManager (BaseProcessorManager):
                 action.execute(df, ctx)
             self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
                                                         f"task {self._task.uid} concluso con successo", df.count())
+            logger.debug(f"task {self._task.uid} concluso con successo")
+
+            return OperationResult(successful=True, description="")
+
+        except Exception as exc:
+            if task_is_blocking:
+                self._log_repository.insert_task_log_failed(self._task.uid, self._run_id,exc.__str__(),
+                                                 f"task {self._task.uid} in ERRORE!")
+            else:
+                self._log_repository.insert_task_log_warning(self._task.uid, self._run_id, exc.__str__(),
+                                                       f"task {self._task.uid} in ERRORE ma non bloccante")
+            logger.error(exc, exc_info=True)
+            return OperationResult(False, str(exc))
+
+class NativeProcessorManager (BaseProcessorManager):
+
+    def start(self) -> OperationResult:
+        try:
+            logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
+            self._log_repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
+            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
+            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+            ctx = TaskContext(
+                self._task,
+                key=self._task.key,
+                query_params=self._task.query_params,
+                registro_repo=RegistroMetadata(MetadataLoader(self._connection_string))
+            )
+            res_read = task_source.fetch_all(ctx)
+            task_destination.write_rows(res_read)
+            #for action in post_actions:
+            #    action.execute(df, ctx)
+            self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
+                                                        f"task {self._task.uid} concluso con successo", len(res_read))
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")

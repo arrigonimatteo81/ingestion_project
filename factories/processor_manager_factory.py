@@ -2,7 +2,7 @@ from common.utils import extract_field_from_file, get_logger, format_key_for_tas
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.domain import ProcessorType
-from processor.manager import SparkProcessorManager, BaseProcessorManager
+from processor.manager import SparkProcessorManager, BaseProcessorManager, NativeProcessorManager
 
 logger = get_logger(__name__)
 
@@ -19,6 +19,12 @@ class ProcessorManagerFactory:
 
             if processor_type.upper() == ProcessorType.SPARK.value:
                return SparkProcessorManager(
+                run_id=run_id,
+                task=task,
+                config_file=config_file,
+                )
+            elif processor_type.upper() == ProcessorType.NATIVE.value:
+               return NativeProcessorManager(
                 run_id=run_id,
                 task=task,
                 config_file=config_file,

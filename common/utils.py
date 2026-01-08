@@ -217,6 +217,6 @@ def format_key_for_task_configuration(cod_tabella: str, cod_abi: int=None, cod_p
 
     if cod_provenienza:
         parts.append(str(cod_provenienza))
-
-    return "-".join(parts)
+    #print(f"MATTEO:{'-'.join(parts)}")
+    return '-'.join(parts)
 

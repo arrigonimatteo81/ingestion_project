@@ -8,7 +8,8 @@ CREATE TABLE public.tab_jdbc_destinations (
 	driver varchar NOT NULL,
 	tablename varchar NOT NULL,
 	overwrite bool,
-	CONSTRAINT tab_jdbc_destinations_pk PRIMARY KEY (destination_id)
+    columns  JSONB,
+    CONSTRAINT tab_jdbc_destinations_pk PRIMARY KEY (destination_id)
 );
 
 ALTER TABLE public.tab_jdbc_destinations ADD CONSTRAINT fk_tab_jdbc_destinations FOREIGN KEY (destination_id) REFERENCES public.tab_task_destinations(destination_id) ON DELETE CASCADE ON UPDATE CASCADE;

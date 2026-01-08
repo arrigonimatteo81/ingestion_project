@@ -18,7 +18,7 @@ class DestinationFactory:
             if destination_type.upper() == DestinationType.JDBC.value:
                 jdbc_destination :TabJDBCDest = repository.get_jdbc_dest_info(destination_id)
                 return TableJDBCDestination(jdbc_destination.username,jdbc_destination.pwd, jdbc_destination.driver,
-                                            jdbc_destination.url, jdbc_destination.tablename, jdbc_destination.overwrite)
+                                            jdbc_destination.url, jdbc_destination.tablename, jdbc_destination.overwrite, jdbc_destination.columns)
             elif destination_type.upper() == DestinationType.FILE.value:
                 file_destination: TabFileDest = repository.get_file_dest_info(destination_id)
                 if file_destination.file_type.upper() == FileFormat.CSV.value:

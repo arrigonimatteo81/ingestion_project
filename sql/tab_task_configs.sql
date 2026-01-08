@@ -12,7 +12,7 @@ CREATE TABLE public.tab_task_configs (
 	dataproc_properties json NULL,
 	processor_type varchar DEFAULT 'spark'::character varying NOT NULL,
 	CONSTRAINT tab_task_configs_pk PRIMARY KEY (name),
-	CONSTRAINT tab_task_configs_processor_type_check CHECK (((processor_type)::text = ANY ((ARRAY['spark'::character varying, 'bigquery'::character varying, 'SPARK'::character varying, 'BIGQUERY'::character varying])::text[])))
+	CONSTRAINT tab_task_configs_processor_type_check CHECK (((processor_type)::text = ANY ((ARRAY['spark'::character varying, 'bigquery'::character varying, 'SPARK'::character varying, 'BIGQUERY'::character varying, 'NATIVE'::character varying, 'native'::character varying])::text[])))
 );
 
 
