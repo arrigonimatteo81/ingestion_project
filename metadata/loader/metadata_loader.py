@@ -80,7 +80,6 @@ class OrchestratorMetadata:
         )
         if row is None:
             return TaskType.default()
-        #print(f"MATTEO {row}")
         return TaskType(*row)
 
 class ProcessorMetadata:

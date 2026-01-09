@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
 from common.result import OperationResult
 from common.utils import extract_field_from_file, get_logger
-from factories.database_factory import DatabaseFactory
 from factories.destination_factory import DestinationFactory
 from factories.registro_update_strategy_factory import RegistroUpdateStrategyFactory
 from factories.source_factory import SourceFactory
@@ -13,6 +15,7 @@ from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
 from processor.sources.base import Source
 from processor.update_strategy.post_task_action import UpdateRegistroAction
+from processor.update_strategy.registro_update_strategy import ExecutionResult
 
 logger = get_logger(__name__)
 
@@ -64,7 +67,7 @@ class BaseProcessorManager (ABC):
 class SparkProcessorManager (BaseProcessorManager):
 
     def _get_spark_session(self) -> SparkSession:
-        spark = SparkSession.builder.appName(f"Processor_{self._run_id}_{self._task.uid}") \
+        spark = SparkSession.builder.config("spark.hadoop.mapreduce.fileoutputcommitter.cleanup-failures.ignored", "true").appName(f"Processor_{self._run_id}_{self._task.uid}") \
                 .getOrCreate()
         logger.debug(
             f"SparkSession properties: {spark.sparkContext.getConf().getAll()}"
@@ -86,8 +89,10 @@ class SparkProcessorManager (BaseProcessorManager):
             session = self._get_spark_session()
             df = task_source.to_dataframe(session, ctx)
             task_destination.write(df)
+            #TODO da ricontrollare questa logica
+            er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
             for action in post_actions:
-                action.execute(df, ctx)
+                action.execute(er, ctx)
             self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
                                                         f"task {self._task.uid} concluso con successo", df.count())
             logger.debug(f"task {self._task.uid} concluso con successo")

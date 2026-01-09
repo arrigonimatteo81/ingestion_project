@@ -1,23 +1,24 @@
 from abc import ABC, abstractmethod
-
-from pyspark.sql import DataFrame, functions as F
+from dataclasses import dataclass
 
 from helpers.query_resolver import TaskContext
 
 
+@dataclass
+class ExecutionResult:
+    max_date: int = None
+
 class RegistroUpdateStrategy(ABC):
 
     @abstractmethod
-    def update(self, df: DataFrame, ctx: TaskContext):
+    def update(self, er: ExecutionResult, ctx: TaskContext):
         pass
 
 
 class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
-    def update(self, df: DataFrame, ctx: TaskContext):
-        max_data = df.agg(
-            F.max("num_data_va").alias("max_data")
-        ).collect()[0]["max_data"]
+    def update(self, er: ExecutionResult, ctx: TaskContext):
+        max_data = er.max_date
 
         ctx.registro_repo.upsert(
             chiave=ctx.key,
@@ -28,21 +29,13 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
 class OnlyIdUpdateStrategy(RegistroUpdateStrategy):
 
-    def update(self, df: DataFrame, ctx: TaskContext):
+    def update(self, er: ExecutionResult, ctx: TaskContext):
         ctx.registro_repo.upsert(
             chiave=ctx.key,
             last_id=ctx.task.query_params.get("id")
         )
 
 class NoOpRegistroUpdateStrategy(RegistroUpdateStrategy):
-    def update(self, df, ctx):
+    def update(self, er, ctx):
         # intenzionalmente vuoto
         return
-
-"""class DominiUpdateStrategy(RegistroUpdateStrategy):
-
-    def update(self, df: DataFrame, ctx: TaskContext):
-        ctx.registro_repo.upsert(
-            chiave={"tabella": ctx.task.tabella},
-            last_id=ctx.task.query_params.get("id")
-        )"""

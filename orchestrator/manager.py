@@ -47,10 +47,16 @@ class OrchestratorManager:
             # TODO eliminare se non si gira in locale con venv
             # f"--conf=spark.pyspark.python={venv_python}",
             # f"--conf=spark.pyspark.driver.python={venv_python}",
+            conf_args = []
+
             for i in todo_list:
+                for k, v in i['pyspark_job']["properties"].items():
+                    conf_args.extend(["--conf", f"{k}={v}"])
+                #"--master", "local[*]",
                 cmd = [
                      "spark-submit",
                      "--jars", ",".join(i['pyspark_job']['jar_file_uris']),
+                     *conf_args,
                      f"{i['pyspark_job']['main_python_file_uri']}",
                      "-r", f"{i['pyspark_job']['args'][1]}",
                      "-t", f"{i['pyspark_job']['args'][3]}",
