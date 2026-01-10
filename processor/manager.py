@@ -13,6 +13,7 @@ from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, T
     RegistroMetadata
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
+from processor.domain import Metric
 from processor.sources.base import Source
 from processor.update_strategy.post_task_action import UpdateRegistroAction
 from processor.update_strategy.registro_update_strategy import ExecutionResult
@@ -89,9 +90,12 @@ class SparkProcessorManager (BaseProcessorManager):
             session = self._get_spark_session()
             df = task_source.to_dataframe(session, ctx)
             task_destination.write(df)
-            #TODO da ricontrollare questa logica
-            er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
             for action in post_actions:
+                required=action.required_metrics()
+                if required == Metric.MAX_DATA_VA:
+                    er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
+                else:
+                    er:ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
             self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
                                                         f"task {self._task.uid} concluso con successo", df.count())

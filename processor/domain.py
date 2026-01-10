@@ -28,3 +28,6 @@ class TaskState(Enum):
     FAILED = "FAILED"
     SUCCESSFUL = "SUCCESSFUL"
     WARNING = "WARNING"
+
+class Metric(Enum):
+    MAX_DATA_VA = "max_data_va"

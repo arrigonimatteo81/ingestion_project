@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from helpers.query_resolver import TaskContext
+from processor.domain import Metric
 
 
 @dataclass
@@ -14,10 +15,17 @@ class RegistroUpdateStrategy(ABC):
     def update(self, er: ExecutionResult, ctx: TaskContext):
         pass
 
+    def required_metrics(self) -> Metric:
+        pass
+
 
 class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
+    def required_metrics(self):
+        return Metric.MAX_DATA_VA
+
     def update(self, er: ExecutionResult, ctx: TaskContext):
+
         max_data = er.max_date
 
         ctx.registro_repo.upsert(
@@ -36,6 +44,7 @@ class OnlyIdUpdateStrategy(RegistroUpdateStrategy):
         )
 
 class NoOpRegistroUpdateStrategy(RegistroUpdateStrategy):
+
     def update(self, er, ctx):
         # intenzionalmente vuoto
         return
