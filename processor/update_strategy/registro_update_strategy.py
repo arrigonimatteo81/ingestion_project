@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from helpers.query_resolver import TaskContext
+from metadata.loader.metadata_loader import RegistroRepository
 from processor.domain import Metric
 
 
@@ -12,7 +13,7 @@ class ExecutionResult:
 class RegistroUpdateStrategy(ABC):
 
     @abstractmethod
-    def update(self, er: ExecutionResult, ctx: TaskContext):
+    def update(self, er: ExecutionResult, ctx: TaskContext, repo: RegistroRepository):
         pass
 
     def required_metrics(self) -> Metric:
@@ -24,11 +25,11 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
     def required_metrics(self):
         return Metric.MAX_DATA_VA
 
-    def update(self, er: ExecutionResult, ctx: TaskContext):
+    def update(self, er: ExecutionResult, ctx: TaskContext, repo: RegistroRepository):
 
         max_data = er.max_date
 
-        ctx.registro_repo.upsert(
+        repo.upsert(
             chiave=ctx.key,
             last_id=ctx.task.query_params.get("id"),
             max_data_va=max_data
@@ -37,14 +38,14 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
 class OnlyIdUpdateStrategy(RegistroUpdateStrategy):
 
-    def update(self, er: ExecutionResult, ctx: TaskContext):
-        ctx.registro_repo.upsert(
+    def update(self, er: ExecutionResult, ctx: TaskContext, repo: RegistroRepository):
+        repo.upsert(
             chiave=ctx.key,
             last_id=ctx.task.query_params.get("id")
         )
 
 class NoOpRegistroUpdateStrategy(RegistroUpdateStrategy):
 
-    def update(self, er, ctx):
+    def update(self, er, ctx, repo):
         # intenzionalmente vuoto
         return

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from metadata.loader.metadata_loader import RegistroMetadata
 from metadata.models.tab_tasks import TaskSemaforo
 
 
@@ -9,7 +8,8 @@ class TaskContext:
     task: TaskSemaforo
     key: dict
     query_params: dict
-    registro_repo: RegistroMetadata
+    run_id: str
+    #registro_repo: RegistroMetadata
 
 class QueryResolver:
 

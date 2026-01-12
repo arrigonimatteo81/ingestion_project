@@ -10,10 +10,10 @@ from factories.registro_update_strategy_factory import RegistroUpdateStrategyFac
 from factories.source_factory import SourceFactory
 from helpers.query_resolver import TaskContext
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, TaskLogRepository, \
-    RegistroMetadata
+    RegistroRepository
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
-from processor.domain import Metric
+from processor.domain import Metric, SourceType
 from processor.sources.base import Source
 from processor.update_strategy.post_task_action import UpdateRegistroAction
 from processor.update_strategy.registro_update_strategy import ExecutionResult
@@ -30,13 +30,15 @@ class BaseProcessorManager (ABC):
         )
         self._repository = ProcessorMetadata(MetadataLoader(self._connection_string))
         self._log_repository = TaskLogRepository(MetadataLoader(self._connection_string))
+        self._registro_repository = RegistroRepository(MetadataLoader(self._connection_string))
 
     def _get_common_data(self):
         """Retrieve common data needed by all processor types"""
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
         source_id,source_type = self._repository.get_source_info(self._task.uid)
-        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file)
+        config_partitioning = self._repository.get_jdbc_source_partitioning_info(self._task.key)
+        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file, config_partitioning)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
         )
@@ -55,7 +57,7 @@ class BaseProcessorManager (ABC):
         strategy = RegistroUpdateStrategyFactory().create(self._task.tipo_caricamento)
 
         post_actions = [
-            UpdateRegistroAction(strategy)
+            UpdateRegistroAction(strategy,self._registro_repository),
         ]
         
         return task_source, task_is_blocking, task_destination, post_actions
@@ -77,16 +79,16 @@ class SparkProcessorManager (BaseProcessorManager):
 
     def start(self) -> OperationResult:
         try:
-
-            self._log_repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
-            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
             ctx = TaskContext(
                 self._task,
                 key=self._task.key,
                 query_params=self._task.query_params,
-                registro_repo=RegistroMetadata(MetadataLoader(self._connection_string))
+                run_id=self._run_id
             )
+            self._log_repository.insert_task_log_running(ctx)
+            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
+            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+
             session = self._get_spark_session()
             df = task_source.to_dataframe(session, ctx)
             task_destination.write(df)
@@ -97,19 +99,16 @@ class SparkProcessorManager (BaseProcessorManager):
                 else:
                     er:ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
-            self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
-                                                        f"task {self._task.uid} concluso con successo", df.count())
+            self._log_repository.insert_task_log_successful(ctx, df.count())
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
             if task_is_blocking:
-                self._log_repository.insert_task_log_failed(self._task.uid, self._run_id,exc.__str__(),
-                                                 f"task {self._task.uid} in ERRORE!")
+                self._log_repository.insert_task_log_failed(ctx ,exc.__str__())
             else:
-                self._log_repository.insert_task_log_warning(self._task.uid, self._run_id, exc.__str__(),
-                                                       f"task {self._task.uid} in ERRORE ma non bloccante")
+                self._log_repository.insert_task_log_warning(ctx, exc.__str__())
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 
@@ -117,33 +116,30 @@ class NativeProcessorManager (BaseProcessorManager):
 
     def start(self) -> OperationResult:
         try:
-            logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
-            self._log_repository.insert_task_log_running( self._task.uid,self._run_id, f"task {self._task.uid} avviato")
-            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
             ctx = TaskContext(
                 self._task,
                 key=self._task.key,
                 query_params=self._task.query_params,
-                registro_repo=RegistroMetadata(MetadataLoader(self._connection_string))
+                run_id=self._run_id
             )
+            logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
+            self._log_repository.insert_task_log_running(ctx)
+            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
+            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
             res_read = task_source.fetch_all(ctx)
             task_destination.write_rows(res_read)
             #for action in post_actions:
             #    action.execute(df, ctx)
-            self._log_repository.insert_task_log_successful(self._task.uid, self._run_id,
-                                                        f"task {self._task.uid} concluso con successo", len(res_read))
+            self._log_repository.insert_task_log_successful(ctx, len(res_read))
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
             if task_is_blocking:
-                self._log_repository.insert_task_log_failed(self._task.uid, self._run_id,exc.__str__(),
-                                                 f"task {self._task.uid} in ERRORE!")
+                self._log_repository.insert_task_log_failed(ctx ,exc.__str__())
             else:
-                self._log_repository.insert_task_log_warning(self._task.uid, self._run_id, exc.__str__(),
-                                                       f"task {self._task.uid} in ERRORE ma non bloccante")
+                self._log_repository.insert_task_log_warning(ctx, exc.__str__())
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 

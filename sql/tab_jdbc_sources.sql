@@ -8,10 +8,7 @@ CREATE TABLE public.tab_jdbc_sources (
 	driver varchar NOT NULL,
 	tablename varchar NULL,
 	query_text varchar NULL,
-	partitioning_expression varchar NULL,
-	num_partitions int4 NULL,
 	CONSTRAINT check_one_column_populated CHECK ((((tablename IS NOT NULL) AND (query_text IS NULL)) OR ((tablename IS NULL) AND (query_text IS NOT NULL)))),
-	CONSTRAINT check_partitioning_both_or_none_cols CHECK ((((partitioning_expression IS NOT NULL) AND (num_partitions IS NOT NULL)) OR ((partitioning_expression IS NULL) AND (num_partitions IS NULL)))),
 	CONSTRAINT tab_jdbc_sources_pk PRIMARY KEY (source_id)
 );
 

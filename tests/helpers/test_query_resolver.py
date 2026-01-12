@@ -1,7 +1,7 @@
 import unittest
 
 from helpers.query_resolver import TaskContext, QueryResolver
-from metadata.loader.metadata_loader import RegistroMetadata, MetadataLoader
+from metadata.loader.metadata_loader import RegistroRepository, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
 import json
 from unittest.mock import MagicMock
@@ -14,7 +14,8 @@ class TestQueryRenderer(unittest.TestCase):
                     task=TaskSemaforo("uid1", "source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
                                       {"p1_1": "param1_1", "p2_1": "param2_1"}),
                     key={"k1_1": "key1_1", "k2": "key2_1"},
-                    query_params={"num_periodo_rif": 202510, "colonna_valore": "valore_p1", "cod_abi": 3239, "cod_provenienza": "PR"}, registro_repo=None
+                    query_params={"num_periodo_rif": 202510, "colonna_valore": "valore_p1", "cod_abi": 3239, "cod_provenienza": "PR"},
+                    run_id="run_id"
                 )
         query_text = QueryResolver.resolve("SELECT ${num_periodo_rif} as NUM_PERIODO_RIF,${colonna_valore} as IMP_VALORE "
                                            "FROM TABELLA where cod_abi=${cod_abi} and provenienza='${cod_provenienza}'",
@@ -28,8 +29,8 @@ class TestQueryRenderer(unittest.TestCase):
                     task=TaskSemaforo("uid1", "source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
                                       {"p1_1": "param1_1", "p2_1": "param2_1"}),
                     key={"k1_1": "key1_1", "k2": "key2_1"},
-                    query_params={"id": 8, "num_periodo_rif": 202510, "colonna_valore": "valore_p1", "cod_abi": 3239, "cod_provenienza": "PR"}, registro_repo=None
-                )
+                    query_params={"id": 8, "num_periodo_rif": 202510, "colonna_valore": "valore_p1", "cod_abi": 3239, "cod_provenienza": "PR"},
+                    run_id="run_id"                )
         query_text = QueryResolver.resolve("SELECT ${num_periodo_rif} as NUM_PERIODO_RIF,${colonna_valore} as IMP_VALORE FROM TABELLA",
             query_ctx
         )
@@ -48,7 +49,7 @@ class TestQueryRenderer(unittest.TestCase):
                     task=TaskSemaforo("uid1", "source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
                                       {"p1_1": "param1_1", "p2_1": "param2_1"}),
                     key={"k1_1": "key1_1", "k2": "key2_1"},
-                    query_params={}, registro_repo=None
+                    query_params={}, run_id="run_id"
                 )
         query_text = QueryResolver.resolve("SELECT * FROM TABELLA", query_ctx)
         query_result = "SELECT * FROM TABELLA"
@@ -59,7 +60,7 @@ class TestQueryUpsertRegistro(unittest.TestCase):
 
     def test_upsert_with_id_and_max_data_va(self):
         loader = MagicMock()
-        repo = RegistroMetadata(loader)
+        repo = RegistroRepository(loader)
 
         chiave = {
             "cod_abi": 123,
@@ -89,7 +90,7 @@ class TestQueryUpsertRegistro(unittest.TestCase):
 
     def test_upsert_without_max_data_va(self):
         loader = MagicMock()
-        repo = RegistroMetadata(loader)
+        repo = RegistroRepository(loader)
 
         chiave = {"cod_tabella": "DOMINI_X"}
 

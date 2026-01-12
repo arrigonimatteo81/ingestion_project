@@ -2,7 +2,7 @@ create table public.tab_semaforo_ready as
 (select
 	gen_random_uuid() as uid,s.tabella as source_id,s.tabella as destination_id,s.tipo_caricamento,s.key,
 	case
-			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ') then
+			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ', 'DOMINI', 'Domini') then
             	jsonb_build_object('id',id)
 			else
             	jsonb_build_object('id',id,
@@ -27,7 +27,7 @@ create table public.tab_semaforo_ready as
 		colonna_valore,
 		ambito,cod_abi,provenienza,periodo_rif,
 		case
-			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ') then jsonb_build_object('cod_tabella',tabella)
+			when tipo_caricamento in ('TABUT','Tabut','Estraz','ESTRAZ') then jsonb_build_object('cod_tabella',tabella)
 		else jsonb_build_object('cod_abi',cod_abi,'cod_tabella',tabella,'cod_provenienza',provenienza)
 		end as key
 	from

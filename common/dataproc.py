@@ -13,8 +13,8 @@ class DataprocService:
         logger.debug(f"Instantiating task: {task} ...")
         payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.source_id, task.destination_id, task.tipo_caricamento,
                             task.key, task.query_params)
-        task_type = repository.get_task_configuration(format_key_for_task_configuration(task.key.get("cod_tabella"),
-                                                                                        task.key.get("cod_abi"),task.key.get("cod_provenienza")))
+        task_type = repository.get_task_configuration(task.key)
+
         return {
                 "step_id": f"step-{task.uid}",
                 "pyspark_job": {

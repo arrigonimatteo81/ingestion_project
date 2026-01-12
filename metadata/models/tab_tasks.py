@@ -156,16 +156,6 @@ class TaskType:
     def default(cls):
         return cls(name="DEFAULT", description="Descrizione di default", main_python_file_uri="main_processor.py")
 
-@dataclass
-class Task:
-    id: str
-    source_id: str
-    destination_id: str
-    description: str
-    config_profile: str
-    is_blocking: bool = True
-
-
 
 @dataclass(frozen=True)
 class TaskSemaforo:

@@ -1,10 +1,13 @@
 import json
 from datetime import datetime
+from typing import Optional
 
 import psycopg2
 
 from common.utils import get_logger
+from helpers.query_resolver import TaskContext
 from metadata.models.tab_config import Config
+from metadata.models.tab_config_partitioning import TabConfigPartitioning
 from metadata.models.tab_file import TabFileSource, TabFileDest
 from metadata.models.tab_jdbc import TabJDBCSource, TabJDBCDest
 from metadata.models.tab_tasks import TaskType, TaskSemaforo
@@ -72,11 +75,11 @@ class OrchestratorMetadata:
         row = self._loader.fetchone(sql, (task_id,))
         return TaskSemaforo(*row)
 
-    def get_task_configuration(self, task_config_profile: str) -> TaskType:
-        sql = "SELECT * FROM public.tab_task_configs WHERE name = ANY (%s) ORDER BY CASE WHEN name = %s THEN 0 WHEN name = 'DEFAULT' THEN 1 END LIMIT 1"
+    def get_task_configuration(self, key: dict) -> TaskType:
+        sql = "SELECT * FROM public.tab_task_configs WHERE key <@ %s::jsonb ORDER by ( SELECT count(*) FROM jsonb_object_keys(key)) desc LIMIT 1;"
         row = self._loader.fetchone(
             sql,
-            ([task_config_profile, "DEFAULT"], task_config_profile)
+            (json.dumps(key),)
         )
         if row is None:
             return TaskType.default()
@@ -92,9 +95,9 @@ class ProcessorMetadata:
         row = self._loader.fetchone(sql,(task_id,))
         return bool(row[0])
 
-    def get_task_processor_type(self, task_id: str) -> str:
-        sql ="select processor_type from public.tab_task_configs where tab_task_configs.name= %s"
-        row = self._loader.fetchone(sql, (task_id,))
+    def get_task_processor_type(self, key: dict) -> str:
+        sql = 'select processor_type from public.tab_task_configs where "key"= %s'
+        row = self._loader.fetchone(sql, (json.dumps(key),))
         if row is None:
             return ProcessorType.SPARK.value
         return row[0]
@@ -105,10 +108,17 @@ class ProcessorMetadata:
         row = self._loader.fetchone(sql, (task_id,))
         return row
 
+    def get_jdbc_source_partitioning_info(self, key: dict) -> TabConfigPartitioning:
+        sql = (
+            f'SELECT partitioning_expression,num_partitions FROM public.tab_config_partitioning where "key" = %s')
+        row = self._loader.fetchone(sql, (json.dumps(key),))
+        if row is None:
+            return TabConfigPartitioning()
+        return TabConfigPartitioning(*row)
+
     def get_jdbc_source_info(self, source_id: str) -> TabJDBCSource:
         sql = (
-            f"SELECT url,username,pwd,driver,tablename,query_text,partitioning_expression,num_partitions "
-            f"FROM public.tab_jdbc_sources where source_id = %s")
+            f"SELECT url,username,pwd,driver,tablename,query_text FROM public.tab_jdbc_sources where source_id = %s")
         row = self._loader.fetchone(sql, (source_id,))
         return TabJDBCSource(*row)
 
@@ -138,7 +148,7 @@ class ProcessorMetadata:
         row = self._loader.fetchone(sql, (task_id,))
         return row[0]
 
-class RegistroMetadata:
+class RegistroRepository:
     def __init__(self, loader: MetadataLoader):
         self._loader = loader
 
@@ -172,92 +182,90 @@ class TaskLogRepository:
     def __init__(self, loader: MetadataLoader):
         self._loader = loader
 
-    def insert_task_log_running(self, task_id: str, run_id: str, description: str = ""):
+    def insert_task_log_running(self, ctx: TaskContext):
         self.insert_task_log(
-            task_id=task_id,
-            run_id=run_id,
+            key_task=json.dumps(ctx.key),
+            run_id=ctx.run_id,
             task_state=TaskState.RUNNING,
-            task_log_description=description,
+            task_log_description=f"task {ctx.key} avviato",
+            periodo=ctx.query_params.get("num_periodo_rif")
         )
 
-    def insert_task_log_successful(self, task_id: str, run_id: str, description: str = "", rows_affected: int = 0):
+    def insert_task_log_successful(self, ctx: TaskContext, rows_affected: int = 0):
         self.insert_task_log(
-            task_id=task_id,
-            run_id=run_id,
+            key_task=json.dumps(ctx.key),
+            run_id=ctx.run_id,
             task_state=TaskState.SUCCESSFUL,
-            task_log_description=description,
-            rows_affected=rows_affected
+            task_log_description=f"task {ctx.key} concluso con successo",
+            rows_affected=rows_affected,
+            periodo=ctx.query_params.get("num_periodo_rif")
         )
 
-    def insert_task_log_failed(self, task_id: str, run_id: str, error_message: str, description: str = ""):
+    def insert_task_log_failed(self, ctx: TaskContext, error_message: str):
         self.insert_task_log(
-            task_id=task_id,
-            run_id=run_id,
+            key_task=json.dumps(ctx.key),
+            run_id=ctx.run_id,
             task_state=TaskState.FAILED,
-            task_log_description=description,
-            error_message= error_message
+            task_log_description=f"task {ctx.key} in ERRORE!",
+            error_message= error_message,
+            periodo=ctx.query_params.get("num_periodo_rif")
         )
 
-    def insert_task_log_warning(self, task_id: str, run_id: str, error_message: str, description: str = ""):
+    def insert_task_log_warning(self, ctx: TaskContext, error_message: str):
         self.insert_task_log(
-            task_id=task_id,
-            run_id=run_id,
+            key_task=json.dumps(ctx.key),
+            run_id=ctx.run_id,
             task_state=TaskState.WARNING,
-            task_log_description=description,
-            error_message= error_message
+            task_log_description=f"task {ctx.key} in ERRORE ma non bloccante",
+            error_message= error_message,
+            periodo=ctx.query_params.get("num_periodo_rif")
         )
-
-    def get_task_group(self, task_id) -> str:
-        sql = "SELECT cod_gruppo FROM public.tab_tasks_semaforo where uid = %s"
-        row = self._loader.fetchone(sql, (task_id,))
-        return row[0]
 
     def insert_task_log(
             self,
-            task_id: str,
+            key_task,
             run_id: str,
             task_state: TaskState,
             task_log_description: str = "",
             error_message: str = "",
             update_ts: datetime = None,
-            rows_affected: int = 0
+            rows_affected: int = 0,
+            periodo: int = None
     ):
         if update_ts is None:
             update_ts = datetime.now()
 
-        #group = self.get_task_group(task_id)
-
         sql = """
         INSERT INTO public.tab_task_logs (
-            task_id,
+            key,
+            periodo,
             run_id,
             state_id,
             description,
             error_message,
             update_ts,
-            task_group,
             rows_affected
         )
         VALUES (
-            %(task_id)s,
+            %(key)s,
+            %(periodo)s,
             %(run_id)s,
             %(state_id)s,
             %(description)s,
             %(error_message)s,
             %(update_ts)s,
-            %(task_group)s,
             %(rows_affected)s
         )
         """
 
         params = {
-            "task_id": task_id,
+            "key": key_task,
+            "periodo": periodo,
             "run_id": run_id,
             "state_id": task_state.value,
             "description": task_log_description,
             "error_message": error_message,
             "update_ts": update_ts,
-            "task_group": "group",
             "rows_affected": rows_affected,
         }
 

@@ -17,11 +17,12 @@ class PostTaskAction(ABC):
 
 class UpdateRegistroAction(PostTaskAction):
 
-    def __init__(self, strategy):
+    def __init__(self, strategy, registro_repo):
         self.strategy = strategy
+        self.registro_repo = registro_repo
 
     def required_metrics(self):
         return self.strategy.required_metrics()
 
     def execute(self, er: ExecutionResult, ctx):
-        self.strategy.update(er, ctx)
+        self.strategy.update(er, ctx, self.registro_repo)

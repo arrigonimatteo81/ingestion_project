@@ -12,9 +12,7 @@ class ProcessorManagerFactory:
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
-            processor_type = repository.get_task_processor_type(format_key_for_task_configuration(task.key.get("cod_tabella"),
-                                                                                                  task.key.get("cod_abi"),
-                                                                                                  task.key.get("cod_provenienza")))
+            processor_type = repository.get_task_processor_type(task.key)
             logger.debug(f"Processor type for task {task.uid}: {processor_type}")
 
             if processor_type.upper() == ProcessorType.SPARK.value:

@@ -1,5 +1,6 @@
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
+from metadata.models.tab_config_partitioning import TabConfigPartitioning
 from metadata.models.tab_file import TabFileSource
 from metadata.models.tab_jdbc import TabJDBCSource
 from processor.domain import SourceType, FileFormat
@@ -13,7 +14,7 @@ logger = get_logger(__name__)
 class SourceFactory:
 
     @staticmethod
-    def create_source(source_type: str, source_id: str, config_file: str):
+    def create_source(source_type: str, source_id: str, config_file: str, cp : TabConfigPartitioning = None):
 
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
@@ -25,7 +26,7 @@ class SourceFactory:
                 elif jdbc_source.query_text:
                     return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
                                            jdbc_source.url, jdbc_source.query_text,
-                                           jdbc_source.partitioning_expression,jdbc_source.num_partitions)
+                                           cp.partitioning_expression,cp.num_partitions)
             elif source_type.upper() == SourceType.FILE.value:
                 file_source: TabFileSource = repository.get_file_source_info(source_id)
                 if file_source.file_type.upper() == FileFormat.EXCEL.value:
