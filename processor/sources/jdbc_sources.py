@@ -6,12 +6,15 @@ from db.database_aware import DatabaseAware
 from factories.partition_configuration_factory import PartitioningConfigurationFactory
 from helpers.query_resolver import TaskContext, QueryResolver
 from metadata.models.tab_jdbc import JDBCTable, JDBCQuery
-from processor.sources.base import Source
+from processor.sources.base import SparkReadable, NativeReadable
 from processor.sources.partitioning import PartitioningConfiguration
 
 logger = get_logger(__name__)
 
-class TableJDBCSource(Source, JDBCTable, DatabaseAware):
+class TableJDBCSource(JDBCTable, DatabaseAware, SparkReadable, NativeReadable):
+    def fetch_all(self, ctx):
+        pass
+
     def __init__(
             self,
             username: str,
@@ -20,7 +23,6 @@ class TableJDBCSource(Source, JDBCTable, DatabaseAware):
             url: str,
             dbtable: str,
     ):
-        Source.__init__(self)
         JDBCTable.__init__(self, username, password, driver, url, dbtable)
         #DatabaseAware.__init__(self, username, password, url)
 
@@ -35,7 +37,7 @@ class TableJDBCSource(Source, JDBCTable, DatabaseAware):
         )
         return df_reader.load()
 
-class QueryJDBCSource(Source, JDBCQuery, DatabaseAware):
+class QueryJDBCSource(JDBCQuery, DatabaseAware, SparkReadable, NativeReadable):
 
     def __init__(
             self,
@@ -48,7 +50,6 @@ class QueryJDBCSource(Source, JDBCQuery, DatabaseAware):
             num_partitions: int = None
     ):
 
-        Source.__init__(self)
         JDBCQuery.__init__(self, username, password, driver, url, query)
         self.partitioning_expression = partitioning_expression
         self.num_partitions = num_partitions

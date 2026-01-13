@@ -7,13 +7,12 @@ from pyspark.sql import SparkSession, DataFrame
 from helpers.query_resolver import TaskContext
 from metadata.models.tab_file import GCS
 from processor.domain import FileFormat
-from processor.sources.base import Source
+from processor.sources.base import SparkReadable
 
 
-class FileSource(GCS, Source):
+class FileSource(GCS, SparkReadable):
     def __init__(self, format_file: FileFormat, gcs_path: str,):
         GCS.__init__(self, format_file, gcs_path)
-        Source.__init__(self)
 
     def to_dataframe(self, spark: SparkSession, ctx: TaskContext = None) -> DataFrame:
         pass

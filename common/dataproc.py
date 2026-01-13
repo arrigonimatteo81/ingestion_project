@@ -1,5 +1,5 @@
 from common.task_semaforo_payload import TaskSemaforoPayload
-from common.utils import get_logger, format_key_for_task_configuration
+from common.utils import get_logger
 from metadata.loader.metadata_loader import OrchestratorMetadata
 from metadata.models.tab_tasks import TaskSemaforo
 

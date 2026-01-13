@@ -13,8 +13,7 @@ from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, T
     RegistroRepository
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
-from processor.domain import Metric, SourceType
-from processor.sources.base import Source
+from processor.domain import Metric
 from processor.update_strategy.post_task_action import UpdateRegistroAction
 from processor.update_strategy.registro_update_strategy import ExecutionResult
 
@@ -38,7 +37,7 @@ class BaseProcessorManager (ABC):
 
         source_id,source_type = self._repository.get_source_info(self._task.uid)
         config_partitioning = self._repository.get_jdbc_source_partitioning_info(self._task.key)
-        task_source: Source = SourceFactory.create_source(source_type, source_id, self._config_file, config_partitioning)
+        task_source = SourceFactory.create_source(source_type, source_id, self._config_file, config_partitioning)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
         )

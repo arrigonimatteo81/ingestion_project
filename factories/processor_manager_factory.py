@@ -1,4 +1,4 @@
-from common.utils import extract_field_from_file, get_logger, format_key_for_task_configuration
+from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.domain import ProcessorType
