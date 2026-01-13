@@ -187,7 +187,7 @@ class TaskLogRepository:
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.RUNNING,
-            task_log_description=f"task {ctx.key} avviato",
+            task_log_description=f"task {ctx.run_id}-{ctx.key} avviato",
             periodo=ctx.query_params.get("num_periodo_rif")
         )
 
@@ -196,7 +196,7 @@ class TaskLogRepository:
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.SUCCESSFUL,
-            task_log_description=f"task {ctx.key} concluso con successo",
+            task_log_description=f"task {ctx.run_id}-{ctx.key} concluso con successo",
             rows_affected=rows_affected,
             periodo=ctx.query_params.get("num_periodo_rif")
         )
@@ -206,7 +206,7 @@ class TaskLogRepository:
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.FAILED,
-            task_log_description=f"task {ctx.key} in ERRORE!",
+            task_log_description=f"task {ctx.run_id}-{ctx.key} in ERRORE!",
             error_message= error_message,
             periodo=ctx.query_params.get("num_periodo_rif")
         )
@@ -216,7 +216,7 @@ class TaskLogRepository:
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.WARNING,
-            task_log_description=f"task {ctx.key} in ERRORE ma non bloccante",
+            task_log_description=f"task {ctx.run_id}-{ctx.key} in ERRORE ma non bloccante",
             error_message= error_message,
             periodo=ctx.query_params.get("num_periodo_rif")
         )

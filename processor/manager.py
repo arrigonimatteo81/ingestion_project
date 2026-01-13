@@ -70,8 +70,10 @@ class BaseProcessorManager (ABC):
 class SparkProcessorManager (BaseProcessorManager):
 
     def _get_spark_session(self) -> SparkSession:
-        spark = SparkSession.builder.config("spark.hadoop.mapreduce.fileoutputcommitter.cleanup-failures.ignored", "true").appName(f"Processor_{self._run_id}_{self._task.uid}") \
-                .getOrCreate()
+        spark = (SparkSession.builder
+                 .config("spark.hadoop.mapreduce.fileoutputcommitter.cleanup-failures.ignored", "true")
+                 .appName(f"Processor_{self._run_id}_{self._task.uid}")
+                 .getOrCreate())
         logger.debug(
             f"SparkSession properties: {spark.sparkContext.getConf().getAll()}"
         )
@@ -128,8 +130,6 @@ class NativeProcessorManager (BaseProcessorManager):
             task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
             res_read = task_source.fetch_all(ctx)
             task_destination.write_rows(res_read)
-            #for action in post_actions:
-            #    action.execute(df, ctx)
             self._log_repository.insert_task_log_successful(ctx, len(res_read))
             logger.debug(f"task {self._task.uid} concluso con successo")
 
