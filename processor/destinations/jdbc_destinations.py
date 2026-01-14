@@ -2,10 +2,10 @@ from pyspark.sql import DataFrame, DataFrameWriter
 
 from db.database_aware import DatabaseAware
 from metadata.models.tab_jdbc import  JDBC
-from processor.destinations.base import Destination
+from processor.destinations.base import Destination, NativeWritable, SparkWritable
 
 
-class TableJDBCDestination(Destination, JDBC, DatabaseAware):
+class TableJDBCDestination(SparkWritable,NativeWritable, JDBC, DatabaseAware, Destination):
 
     def write_rows(self, rows):
 
@@ -36,7 +36,6 @@ class TableJDBCDestination(Destination, JDBC, DatabaseAware):
     ):
         Destination.__init__(self, overwrite)
         JDBC.__init__(self, username, password, driver, url)
-        #DatabaseAware.__init__(self, username, password, url)
         self.db_table_destination = db_table_destination
         self.columns = columns
 

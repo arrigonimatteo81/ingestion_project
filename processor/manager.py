@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from google.cloud import bigquery
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -48,7 +49,7 @@ class BaseProcessorManager (ABC):
         )
 
         destination_id, destination_type = self._repository.get_destination_info(self._task.uid)
-        task_destination: Destination = DestinationFactory.create_destination(destination_type, destination_id, self._config_file)
+        task_destination = DestinationFactory.create_destination(destination_type, destination_id, self._config_file)
         logger.info(
             f"Destination retrieved for task_id={self._task.uid}: {task_destination}"
         )
@@ -142,6 +143,40 @@ class NativeProcessorManager (BaseProcessorManager):
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 
+class BigQueryProcessorManager (BaseProcessorManager):
+
+    def start(self) -> OperationResult:
+        try:
+            ctx = TaskContext(
+                self._task,
+                key=self._task.key,
+                query_params=self._task.query_params,
+                run_id=self._run_id
+            )
+            self._log_repository.insert_task_log_running(ctx)
+            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
+            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+            src = task_source.to_query(ctx)
+            task_destination.write_query(src,ctx)
+            #for action in post_actions: potrebbe però servire qui il salvataggio in registro
+            #    required=action.required_metrics()
+            #    if required == Metric.MAX_DATA_VA:
+            #        er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
+            #    else:
+            #        er:ExecutionResult = ExecutionResult()
+            #    action.execute(er, ctx)
+            self._log_repository.insert_task_log_successful(ctx, len(src))
+            logger.debug(f"task {self._task.uid} concluso con successo")
+
+            return OperationResult(successful=True, description="")
+
+        except Exception as exc:
+            if task_is_blocking:
+                self._log_repository.insert_task_log_failed(ctx ,exc.__str__())
+            else:
+                self._log_repository.insert_task_log_warning(ctx, exc.__str__())
+            logger.error(exc, exc_info=True)
+            return OperationResult(False, str(exc))
 
 
 

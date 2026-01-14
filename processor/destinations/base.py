@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from dataclasses import dataclass
 
 from pyspark.sql import DataFrame
@@ -13,10 +13,21 @@ class Destination:
     def overwrite(self):
         return self._overwrite
 
+
+class SparkWritable(ABC):
+
     @abstractmethod
     def write(self, df: DataFrame):
         pass
 
+
+class NativeWritable(ABC):
     @abstractmethod
     def write_rows(self, rows):
-        raise NotImplementedError
+        pass
+
+
+class BigQueryWritable(ABC):
+    @abstractmethod
+    def write_query(self, query, ctx):
+        pass

@@ -1,9 +1,11 @@
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
+from metadata.models.tab_bigquery import TabBigQuerySource
 from metadata.models.tab_config_partitioning import TabConfigPartitioning
 from metadata.models.tab_file import TabFileSource
 from metadata.models.tab_jdbc import TabJDBCSource
 from processor.domain import SourceType, FileFormat
+from processor.sources.bigquery_source import BigQueryTableSource
 from processor.sources.file_sources import ExcelFileSource, CsvFileSource, ParquetFileSource
 from processor.sources.jdbc_sources import TableJDBCSource, QueryJDBCSource
 
@@ -35,7 +37,15 @@ class SourceFactory:
                     return CsvFileSource(file_source.path, file_source.csv_separator)
                 elif file_source.file_type.upper() == FileFormat.PARQUET.value:
                     return ParquetFileSource(file_source.path)
-            #if source_type.upper() == SourceType.BIGQUERY.value:
+            elif source_type.upper() == SourceType.BIGQUERY.value:
+                bigquery_source: TabBigQuerySource = repository.get_bq_source_info(source_id)
+                if bigquery_source.tablename:
+                    return TableJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url,
+                                           jdbc_source.tablename)
+                elif bigquery_source.query_text:
+                    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
+                                           jdbc_source.url, jdbc_source.query_text,
+                                           cp.partitioning_expression, cp.num_partitions)
             else:
                 logger.error("Unsupported source type!!!")
                 raise ValueError(f"Unsupported source type: {source_type}")

@@ -3,11 +3,11 @@ import re
 from pyspark.sql import DataFrame
 
 from metadata.models.tab_file import GCS
-from processor.destinations.base import Destination
+from processor.destinations.base import Destination, SparkWritable
 from processor.domain import FileFormat
 
 
-class FileDestination(GCS, Destination):
+class FileDestination(GCS, SparkWritable, Destination):
     def __init__(self, format_file: FileFormat, gcs_path: str, overwrite: bool):
         GCS.__init__(self, format_file, gcs_path)
         Destination.__init__(self, overwrite)

@@ -2,33 +2,24 @@ from dataclasses import dataclass
 
 @dataclass
 class TabBigQuerySource:
-    url: str
-    username: str
-    pwd: str
-    driver: str
+    project: str
+    dataset: str
     tablename: str
     query_text: str = None
-    partitioning_expression: str = None
-    num_partitions: int = None
 
     def __repr__(self):
-        return (f"TabBigQuerySource(url={self.url},username={self.username},pwd={self.pwd},driver={self.driver},"
-                f"tablename={self.tablename}, query_text={self.query_text},partitioning_expression={self.partitioning_expression},"
-                f"num_partitions={self.num_partitions})")
+        return f"TabBigQuerySource(project={self.project},dataset={self.dataset},tablename={self.tablename},query_text={self.query_text})"
 
 @dataclass
 class TabBigQueryDest:
-    url: str
-    username: str
-    pwd: str
-    driver: str
+    project: str
+    dataset: str
     tablename: str
-    columns: [str]
     overwrite: bool = False
 
     def __repr__(self):
-        return (f"TabBigQueryDest(url={self.url},username={self.username},pwd={self.pwd},driver={self.driver},"
-                f"tablename={self.tablename}, overwrite={self.overwrite}, columns={self.columns})")
+        return (f"TabBigQueryDest(project={self.project},dataset={self.dataset},tablename={self.tablename},"
+                f"overwrite={self.overwrite})")
 
 class BigQuery:
 

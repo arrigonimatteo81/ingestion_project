@@ -2,7 +2,6 @@ from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_file import TabFileDest
 from metadata.models.tab_jdbc import TabJDBCDest
-from processor.destinations.base import Destination
 from processor.destinations.file_destinations import CsvFileDestination, ParquetFileDestination
 from processor.destinations.jdbc_destinations import TableJDBCDestination
 from processor.domain import DestinationType, FileFormat
@@ -11,7 +10,7 @@ logger = get_logger(__name__)
 
 class DestinationFactory:
     @staticmethod
-    def create_destination(destination_type: str, destination_id: str, config_file: str) -> Destination:
+    def create_destination(destination_type: str, destination_id: str, config_file: str):
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:

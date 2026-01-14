@@ -27,6 +27,12 @@ class ProcessorManagerFactory:
                 task=task,
                 config_file=config_file,
                 )
+            elif processor_type.upper() == ProcessorType.BIGQUERY.value:
+               return BigQueryProcessorManager(
+                run_id=run_id,
+                task=task,
+                config_file=config_file,
+                )
             else:
                 logger.error("Unsupported processor type!!!")
                 raise ValueError(f"Unsupported processor type: {processor_type}")
