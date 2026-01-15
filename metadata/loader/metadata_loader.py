@@ -65,6 +65,20 @@ class OrchestratorMetadata:
     def __init__(self, loader: MetadataLoader):
         self._loader = loader
 
+    def get_one_configuration(self, config_name) -> Config:
+        sql = f"SELECT config_name, config_value FROM public.tab_configurations where config_name = ANY(%s)"
+        row = self._loader.fetchone(sql, (config_name,))
+        return Config(*row)
+
+    def get_all_configurations(self) -> dict:
+        sql = f"SELECT config_name, config_value FROM public.tab_configurations"
+        rows = self._loader.fetchall(sql)
+        configs = {
+            c.config_name: c.config_value
+            for c in (Config(*r) for r in rows)
+        }
+        return configs
+
     def get_all_tasks_in_group(self, groups: [str]) -> [TaskSemaforo]:
         sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.tab_semaforo_ready '
                f'where tipo_caricamento = ANY(%s)')
