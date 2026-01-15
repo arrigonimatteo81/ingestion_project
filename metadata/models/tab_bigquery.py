@@ -15,6 +15,9 @@ class TabBigQueryDest:
     project: str
     dataset: str
     tablename: str
+    gcs_bucket: str
+    use_direct_write: bool
+    columns: [str]
     overwrite: bool = False
 
     def __repr__(self):

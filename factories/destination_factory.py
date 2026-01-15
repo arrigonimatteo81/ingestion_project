@@ -1,7 +1,9 @@
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
+from metadata.models.tab_bigquery import TabBigQueryDest
 from metadata.models.tab_file import TabFileDest
 from metadata.models.tab_jdbc import TabJDBCDest
+from processor.destinations.bigquery_destinations import TableBigQueryDestination
 from processor.destinations.file_destinations import CsvFileDestination, ParquetFileDestination
 from processor.destinations.jdbc_destinations import TableJDBCDestination
 from processor.domain import DestinationType, FileFormat
@@ -24,7 +26,11 @@ class DestinationFactory:
                     return CsvFileDestination(file_destination.path, file_destination.csv_separator,file_destination.overwrite)
                 elif file_destination.file_type.upper() == FileFormat.PARQUET.value:
                     return ParquetFileDestination(file_destination.path, file_destination.overwrite)
-            #if source_type.upper() == SourceType.BIGQUERY.value:
+            elif destination_type.upper() == DestinationType.BIGQUERY.value:
+                bigquery_destination: TabBigQueryDest = repository.get_bigquery_dest_info(destination_id)
+                return TableBigQueryDestination(bigquery_destination.project, bigquery_destination.dataset, bigquery_destination.tablename,
+                                                bigquery_destination.overwrite, bigquery_destination.columns, bigquery_destination.gcs_bucket,
+                                                bigquery_destination.use_direct_write)
             else:
                 logger.error("Unsupported destination type!!!")
                 raise ValueError(f"Unsupported destination type: {destination_type}")

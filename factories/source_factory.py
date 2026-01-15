@@ -5,7 +5,7 @@ from metadata.models.tab_config_partitioning import TabConfigPartitioning
 from metadata.models.tab_file import TabFileSource
 from metadata.models.tab_jdbc import TabJDBCSource
 from processor.domain import SourceType, FileFormat
-from processor.sources.bigquery_source import BigQueryTableSource
+from processor.sources.bigquery_source import TableBigQuerySource, QueryBigQuerySource
 from processor.sources.file_sources import ExcelFileSource, CsvFileSource, ParquetFileSource
 from processor.sources.jdbc_sources import TableJDBCSource, QueryJDBCSource
 
@@ -40,12 +40,9 @@ class SourceFactory:
             elif source_type.upper() == SourceType.BIGQUERY.value:
                 bigquery_source: TabBigQuerySource = repository.get_bq_source_info(source_id)
                 if bigquery_source.tablename:
-                    return TableJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver, jdbc_source.url,
-                                           jdbc_source.tablename)
+                    return TableBigQuerySource(bigquery_source.project, bigquery_source.dataset, bigquery_source.tablename)
                 elif bigquery_source.query_text:
-                    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
-                                           jdbc_source.url, jdbc_source.query_text,
-                                           cp.partitioning_expression, cp.num_partitions)
+                    return QueryBigQuerySource(bigquery_source.project, bigquery_source.dataset, bigquery_source.query_text)
             else:
                 logger.error("Unsupported source type!!!")
                 raise ValueError(f"Unsupported source type: {source_type}")

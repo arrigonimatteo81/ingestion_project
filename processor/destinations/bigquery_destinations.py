@@ -10,21 +10,23 @@ logger = get_logger(__name__)
 
 class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destination, NativeWritable):
 
-
-
     def __init__(
             self,
             project: str,
             dataset: str,
             db_table_destination: str,
             overwrite: bool,
-            columns: list[str]
+            columns: list[str],
+            gcs_bucket: str,
+            use_direct_write: bool
     ):
         Destination.__init__(self, overwrite)
         BigQuery.__init__(self, project, dataset)
         self.db_table_destination = db_table_destination
         self.client_bigquery = bigquery.Client()
         self.columns = columns
+        self.gcs_bucket = gcs_bucket
+        self.use_direct_write = use_direct_write
 
     def write(self, df: DataFrame):
         if self.overwrite:
@@ -35,17 +37,13 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
         tmp_df_writer: DataFrameWriter = (
             df.write.format(self.format)
             .option("table", f"{self.project}.{self.dataset}.{self.db_table_destination}")
-            .option("writeMethod", "direct")
             .mode(mode_write)
         )
 
-        #if self.partition_columns_list:
-        #    tmp_df_writer.partitionBy(*self.partition_columns_list)
-
-        #if not self.use_direct_write:
-        #    tmp_df_writer.option("temporaryGcsBucket", self.gcs_bucket_name)
-        #else:
-        #    tmp_df_writer.option("writeMethod", "direct")
+        if not self.use_direct_write:
+            tmp_df_writer.option("temporaryGcsBucket", self.gcs_bucket)
+        else:
+            tmp_df_writer.option("writeMethod", "direct")
 
         logger.debug(f"tmp_df_writer.save...")
         tmp_df_writer.save()

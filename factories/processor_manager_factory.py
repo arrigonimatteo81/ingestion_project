@@ -2,7 +2,8 @@ from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.domain import ProcessorType
-from processor.manager import SparkProcessorManager, BaseProcessorManager, NativeProcessorManager
+from processor.manager import SparkProcessorManager, BaseProcessorManager, NativeProcessorManager, \
+    BigQueryProcessorManager
 
 logger = get_logger(__name__)
 

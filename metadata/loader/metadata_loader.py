@@ -6,6 +6,7 @@ import psycopg2
 
 from common.utils import get_logger
 from helpers.query_resolver import TaskContext
+from metadata.models.tab_bigquery import TabBigQuerySource, TabBigQueryDest
 from metadata.models.tab_config import Config
 from metadata.models.tab_config_partitioning import TabConfigPartitioning
 from metadata.models.tab_file import TabFileSource, TabFileDest
@@ -127,6 +128,11 @@ class ProcessorMetadata:
         row = self._loader.fetchone(sql, (source_id,))
         return TabFileSource(*row)
 
+    def get_bq_source_info(self, source_id):
+        sql = "SELECT project,dataset,tablename,query_text FROM public.tab_bigquery_sources where source_id = %s"
+        row = self._loader.fetchone(sql, (source_id,))
+        return TabBigQuerySource(*row)
+
     def get_destination_info(self, task_id: str) -> (str,str):
         sql = (f"SELECT b.destination_id, b.destination_type FROM public.tab_semaforo_ready a join public.tab_task_destinations b "
                     f"on a.destination_id = b.destination_id where a.uid = %s")
@@ -142,6 +148,12 @@ class ProcessorMetadata:
         sql = "SELECT format_file,gcs_path,csv_separator,overwrite FROM public.tab_file_destinations where destination_id = %s"
         row = self._loader.fetchone(sql, (destination_id,))
         return TabFileDest(*row)
+
+    def get_bigquery_dest_info(self, destination_id: str) -> TabBigQueryDest:
+        sql = ("SELECT project,dataset,tablename,gcs_bucket,use_direct_write,columns,overwrite "
+               "FROM public.tab_bigquery_destinations where destination_id = %s")
+        row = self._loader.fetchone(sql, (destination_id,))
+        return TabBigQueryDest(*row)
 
     def get_task_group(self, task_id) -> str:
         sql = "SELECT cod_gruppo FROM public.tab_tasks_semaforo where uid = %s"

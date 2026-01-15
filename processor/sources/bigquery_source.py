@@ -5,7 +5,7 @@ from metadata.models.tab_bigquery import BigQueryTable, BigQueryQuery
 from processor.sources.base import SparkReadable, BigQueryReadable
 
 
-class BigQueryQuerySource(BigQueryQuery, SparkReadable, BigQueryReadable):
+class QueryBigQuerySource(BigQueryQuery, SparkReadable, BigQueryReadable):
     def to_query(self, ctx) -> str:
         return QueryResolver.resolve(self.query, ctx)
 
@@ -23,7 +23,7 @@ class BigQueryQuerySource(BigQueryQuery, SparkReadable, BigQueryReadable):
     #):
         BigQueryQuery.__init__(self, project, dataset, query)
 
-class BigQueryTableSource(BigQueryTable, SparkReadable, BigQueryReadable):
+class TableBigQuerySource(BigQueryTable, SparkReadable, BigQueryReadable):
     def to_query(self, ctx) -> str:
         return QueryResolver.resolve(f"select * from {self.project}.{self.dataset}.{self.table}", ctx)
 
