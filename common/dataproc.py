@@ -75,11 +75,12 @@ class DataprocService:
 
     @staticmethod
     def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo],
-                         max_tasks_per_workflow: int, dp_cfg, groups: [str])  -> list[WorkflowTemplate]:
+                         max_tasks_per_workflow: int, groups: [str]):
+
         logger.debug("Creating todo list...")
 
-        heavy = list(filter(lambda t: t.is_heavy, tasks))
-        normal = list(filter(lambda t: not t.is_heavy, tasks))
+        heavy = [t for t in tasks if t.is_heavy]
+        normal = [t for t in tasks if not t.is_heavy]
 
         workflows = []
         wf_idx = 1
@@ -105,15 +106,10 @@ class DataprocService:
 
             workflow_id = create_workflow_template_name(run_id, groups, wf_idx)
 
-            workflow_template: WorkflowTemplate = (
-                DataprocService.create_dataproc_workflow_template(
-                    tasks=steps,
-                    workflow_id=workflow_id,
-                    dataproc_configuration=dp_cfg
-                )
-            )
-
-            workflows.append(workflow_template)
+            workflows.append({
+                "workflow_template_id": f"{workflow_id}",
+                "jobs": steps
+            })
 
             wf_idx += 1
 

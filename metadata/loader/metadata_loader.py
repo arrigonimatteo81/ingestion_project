@@ -80,8 +80,8 @@ class OrchestratorMetadata:
         return configs
 
     def get_all_tasks_in_group(self, groups: [str]) -> [TaskSemaforo]:
-        sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param FROM public.tab_semaforo_ready '
-               f'where tipo_caricamento = ANY(%s)')
+        sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param, is_heavy '
+               f'FROM public.tab_semaforo_ready where tipo_caricamento = ANY(%s)')
         rows = self._loader.fetchall(sql, (groups,))
         return [TaskSemaforo(*r) for r in rows]
 

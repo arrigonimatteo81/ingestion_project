@@ -165,3 +165,4 @@ class TaskSemaforo:
     tipo_caricamento: str
     key: Dict
     query_params: Dict
+    is_heavy: bool = False
