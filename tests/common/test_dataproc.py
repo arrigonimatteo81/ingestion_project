@@ -3,6 +3,7 @@ import unittest
 from common.dataproc import DataprocService
 from metadata.loader.metadata_loader import OrchestratorMetadata
 from metadata.models.tab_tasks import TaskType, TaskSemaforo
+from tests.common.mocked import TEST_DATAPROC_CONFIGURATION
 
 TEST_RUN_ID = "20250115_1013"
 TEST_APPLICATION_CONF = "application.conf"
@@ -23,7 +24,6 @@ class MockOrchestratorRepository(OrchestratorMetadata):
     def get_task_configuration(self, config_task):
         return TaskType("source_id-03239-PR", "descrizione profilo di test", "main_file_python.py",
                         ["additional_file_1.py", "additional_file_2.py"], ["jar_file_uri"], ["additional_jar_file_uri"])
-
 
 class TestDataprocService(unittest.TestCase):
     def setUp(self):
@@ -73,7 +73,7 @@ class TestDataprocService(unittest.TestCase):
         todo_list = DataprocService.create_todo_list(TEST_APPLICATION_CONF, self.orchestrator_repo, TEST_RUN_ID,
                                                      [TaskSemaforo("uid1", "source_1", "destination_1", "gruppo_1",
                                                                    {"k1_1": "key1_1", "k2": "key2_1"},
-                                                                   {"p1_1": "param1_1", "p2_1": "param2_1"})])
+                                                                   {"p1_1": "param1_1", "p2_1": "param2_1"})],5,TEST_DATAPROC_CONFIGURATION,"GROUP")
         self.assertEqual(1, len(todo_list))
 
     def test_create_to_do_list_of_two_items(self):
@@ -85,3 +85,30 @@ class TestDataprocService(unittest.TestCase):
                                                                    {"k1_2": "key1_2", "k2": "key2_2"},
                                                                    {"p1_2": "param1_2", "p2_2": "param2_2"}), ])
         self.assertEqual(2, len(todo_list))
+
+    def test_build_labels_with_all_labels(self):
+        task1_job = DataprocService.instantiate_task(
+            task=TaskSemaforo('uid1', 'source_1', 'destination_1', 'gruppo_1', key={"cod_abi": 3239, "cod_tabella": "REAGDG", "cod_provenienza": "AN"},
+                              query_params={"id": 120957, "cod_abi": 3239, "num_ambito": 0, "max_data_va": 20000101, "cod_provenienza": "AN",
+                               "num_periodo_rif": 202511, "cod_colonna_valore": ""}),
+            repository=self.orchestrator_repo,
+            run_id=TEST_RUN_ID,
+            config_file=TEST_APPLICATION_CONF,
+        )
+        expected={'run_id': '20250115_1013', 'table': 'reagdg', 'abi': '3239', 'prov': 'an', 'periodo': '202511'}
+
+        self.assertEqual(task1_job.get("labels"), expected)
+
+    def test_build_labels_without_all_labels(self):
+        task1_job = DataprocService.instantiate_task(
+            task=TaskSemaforo('uid1', 'source_1', 'destination_1', 'gruppo_1',
+                              key={"cod_tabella": "REAGDG"},
+                              query_params={"id": 120957, }),
+            repository=self.orchestrator_repo,
+            run_id=TEST_RUN_ID,
+            config_file=TEST_APPLICATION_CONF,
+        )
+        expected = {'run_id': '20250115_1013', 'table': 'reagdg'}
+
+        self.assertEqual(task1_job.get("labels"), expected)
+

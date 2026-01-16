@@ -1,15 +1,30 @@
 from google.api_core.retry import Retry
 from google.api_core import retry as retries
-from google.cloud.dataproc_v1 import WorkflowTemplate
-
+from google.cloud.dataproc_v1 import WorkflowTemplate, WorkflowTemplateServiceClient, WorkflowMetadata, WorkflowGraph, \
+    WorkflowNode
+from google.api_core.operation import Operation
 from common.configuration import DataprocConfiguration
+from common.result import OperationResult
 from common.task_semaforo_payload import TaskSemaforoPayload
 from common.utils import get_logger
 from metadata.loader.metadata_loader import OrchestratorMetadata
 from metadata.models.tab_tasks import TaskSemaforo
+import time
 
 logger = get_logger(__name__)
 
+
+def create_workflow_template_name(run_id: str, groups: list, index: int) -> str:
+    if not groups or not run_id:
+        raise ValueError(
+            "Group list and run_id are mandatory to create the template name"
+        )
+    groups = list(set(groups))  # removing duplicates
+    groups_lower = [g.lower() for g in groups]
+    groups_sorted = sorted(groups_lower)
+    groups_formatted = "_".join(g.replace(",", "") for g in groups_sorted)
+    workflow_id = f"wft-{run_id}-{groups_formatted}-{str(index).rjust(3, '0')}"
+    return workflow_id
 
 
 class DataprocService:
@@ -39,31 +54,81 @@ class DataprocService:
                     "file_uris": task_type.additional_file_uris,
                     "properties": task_type.dataproc_properties
                 },
+                "labels": DataprocService._build_labels(task, run_id)
             }
 
+    @staticmethod
+    def _build_labels(task, run_id) -> dict:
+        raw_labels = {
+            "run_id": run_id,
+            "table": task.key.get("cod_tabella"),
+            "abi": task.key.get("cod_abi"),
+            "prov": task.key.get("cod_provenienza"),
+            "periodo": task.query_params.get("num_periodo_rif")
+        }
+
+        return {
+            k: str(v).lower()[:63]
+            for k, v in raw_labels.items()
+            if v is not None
+        }
 
     @staticmethod
-    def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo]):
+    def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo],
+                         max_tasks_per_workflow: int, dp_cfg, groups: [str])  -> list[WorkflowTemplate]:
         logger.debug("Creating todo list...")
-        list_of_tasks=[]
-        for task in tasks:
-            list_of_tasks.append(DataprocService.instantiate_task(task, orchestrator_repository, run_id, config_file))
-        return list_of_tasks
+
+        heavy = list(filter(lambda t: t.is_heavy, tasks))
+        normal = list(filter(lambda t: not t.is_heavy, tasks))
+
+        workflows = []
+        wf_idx = 1
+
+        while heavy or normal:
+            wf_tasks = []
+
+            if heavy:
+                wf_tasks.append(heavy.pop(0))
+
+            while len(wf_tasks) < max_tasks_per_workflow and normal:
+                wf_tasks.append(normal.pop(0))
+
+            steps = [
+                DataprocService.instantiate_task(
+                    task=task,
+                    run_id=run_id,
+                    config_file=config_file,
+                    repository=orchestrator_repository
+                )
+                for task in wf_tasks
+            ]
+
+            workflow_id = create_workflow_template_name(run_id, groups, wf_idx)
+
+            workflow_template: WorkflowTemplate = (
+                DataprocService.create_dataproc_workflow_template(
+                    tasks=steps,
+                    workflow_id=workflow_id,
+                    dataproc_configuration=dp_cfg
+                )
+            )
+
+            workflows.append(workflow_template)
+
+            wf_idx += 1
+
+        return workflows
 
     @staticmethod
     def create_dataproc_workflow_template(
             tasks,
             workflow_id: str,
-            dataproc_configuration: DataprocConfiguration,
-            orchestrator_repository: OrchestratorMetadata,
-            run_id: str,
-            config_file: str,
-
+            dataproc_configuration: DataprocConfiguration
     ) -> WorkflowTemplate:
         logger.debug("Creating workflow request...")
+
         template_request: dict = DataprocService.create_workflow_template_request(
             dataproc_configuration,
-            run_id,
             tasks,
             workflow_id,
         )
@@ -90,7 +155,6 @@ class DataprocService:
     @staticmethod
     def create_workflow_template_request(
             dataproc_configuration: DataprocConfiguration,
-            run_id: str,
             tasks,
             workflow_id: str,
     ) -> dict:
@@ -99,9 +163,83 @@ class DataprocService:
         template_request = {
             "id": workflow_id,
             "placement": dataproc_configuration.cluster_name,
-            "jobs": [],  # Initialize an empty list for jobs
+            "jobs": [tasks]
         }
-        for task in tasks:
-            template_request["jobs"].append(task)
-
         return template_request
+
+    @staticmethod
+    def create_workflow_client(
+            dataproc_configuration: DataprocConfiguration,
+    ) -> WorkflowTemplateServiceClient:
+        workflow_client: WorkflowTemplateServiceClient = WorkflowTemplateServiceClient(
+            client_options={"api_endpoint": f"{dataproc_configuration.region}-dataproc.googleapis.com:443"}
+        )
+        return workflow_client
+
+    @staticmethod
+    def instantiate_dataproc_workflow_template(
+            dataproc_configuration: DataprocConfiguration, template_name: str
+    ):
+        logger.debug(f"Instantiating Dataproc workflow template {template_name}...")
+        workflow_client: WorkflowTemplateServiceClient = (
+            DataprocService.create_workflow_client(dataproc_configuration)
+        )
+        operation: Operation = workflow_client.instantiate_workflow_template(
+            name=template_name
+        )
+
+        logger.debug(f"Workflow {template_name} started")
+        while not operation.done():
+            logger.debug(
+                f"Waiting for the workflow ({str(dataproc_configuration.poll_sleep_time_seconds)} secs)..."
+            )
+            time.sleep(dataproc_configuration.poll_sleep_time_seconds)
+
+        metadata: WorkflowMetadata = operation.metadata
+        logger.debug(
+            f"Workflow finished: State: {metadata.state}, Start time: {metadata.start_time}, End time: {metadata.end_time}"
+        )
+
+        return DataprocService._extract_result_from_operation(operation)
+
+    @staticmethod
+    def _extract_result_from_operation(operation: Operation) -> OperationResult:
+        nodes_errors: list = []
+        metadata: WorkflowMetadata = operation.metadata
+        logger.debug(f"Extracting metadata from operation: {metadata}")
+        if metadata:
+            graph: WorkflowGraph = metadata.graph
+            if graph:
+                logger.debug("Job statuses:")
+                all_nodes_success: bool = True
+
+                for node in graph.nodes:
+                    step_id = node.step_id
+                    job_id = node.job_id
+                    state = node.state
+                    logger.debug(f"\tStep: {step_id}, Job: {job_id}, State: {state}")
+
+                    if int(state) != WorkflowNode.NodeState.COMPLETED:
+                        all_nodes_success = False
+                        nodes_errors.append(
+                            f"Step ID: {step_id}, Job ID: {job_id}, State: {state} failed with error {str(node.error)}"
+                        )
+                if all_nodes_success:
+                    logger.info("Workflow completed successfully")
+                    return OperationResult(True, f"")
+                else:
+                    err: str = (
+                            f"Workflow terminated with errors: '"
+                            + ", ".join(nodes_errors)
+                            + "'"
+                    )
+                    logger.error(err)
+                    return OperationResult(False, err)
+            else:
+                err: str = "No graph data in metadata"
+                logger.warning(err)
+                return OperationResult(False, err)
+        else:
+            err: str = "No metadata available in operation"
+            logger.warning(err)
+            return OperationResult(False, err)

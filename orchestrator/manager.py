@@ -34,11 +34,12 @@ class OrchestratorManager:
 
         conf = Configuration(self._repository.get_all_configurations())
         self._dataproc_cfg = DataprocConfiguration.from_configuration(conf)
+        self._max_tasks_per_workflow = int(conf.get("ingestion_max_tasks_per_workflow"))
 
         logger.info("Orchestrator initialized")
 
     @staticmethod
-    def create_workflow_template_name(run_id: str, groups: list) -> str:
+    def create_workflow_template_name(run_id: str, groups: list, index:  int) -> str:
         if not groups or not run_id:
             raise ValueError(
                 "Group list and run_id are mandatory to create the template name"
@@ -47,7 +48,7 @@ class OrchestratorManager:
         groups_lower = [g.lower() for g in groups]
         groups_sorted = sorted(groups_lower)
         groups_formatted = "_".join(g.replace(",", "") for g in groups_sorted)
-        workflow_id = f"wft-{run_id}-{groups_formatted}"
+        workflow_id = f"wft-{run_id}-{groups_formatted}-{str(index).rjust(3,'0')}"
         return workflow_id
 
     @staticmethod
@@ -67,23 +68,58 @@ class OrchestratorManager:
             return OperationResult(successful=False, description=err_mex)
         else:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
-            todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks)
+            todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks,
+                                                         self._max_tasks_per_workflow,self._dataproc_cfg, self._groups)
 
-            chunks = list(self.chunked(todo_list, MAX_TASKS_PER_WORKFLOW))
+            for wf in todo_list:
+                logger.debug(f"Workflow template '{wf}' created")
+                logger.info(
+                    f"Instantiating dataproc workflow template {wf.name} ({len(wf.jobs)} jobs)"
+                )
+                result: OperationResult = (
+                    DataprocService.instantiate_dataproc_workflow_template(
+                        self._dataproc_cfg, wf.name
+                    )
+                )
+                if not result.successful:
+                    return OperationResult(successful=False, description=f"{result.description}")
+
+            """chunks = list(self.chunked(todo_list, self._max_tasks_per_workflow))
 
             for idx, chunk in enumerate(chunks):
+                workflow_id = self.create_workflow_template_name(self._run_id, self._groups, idx)
+
                 workflow_template: WorkflowTemplate = (
                     DataprocService.create_dataproc_workflow_template(
                         tasks = chunk,
-                        workflow_id=self.create_workflow_template_name(self._run_id, self._groups),
-                        dataproc_configuration=self._dataproc_cfg,
-                        orchestrator_repository=self._repository,
-                        run_id=self._run_id,
-                        config_file=self._config_file,
+                        workflow_id=workflow_id,
+                        dataproc_configuration=self._dataproc_cfg
                     )
                 )
 
-            """
+                logger.debug(f"Workflow template '{workflow_template}' created")
+                logger.info(
+                    f"Instantiating dataproc workflow template {workflow_template.name} ({len(workflow_template.jobs)} jobs)"
+                )
+                result: OperationResult = (
+                    DataprocService.instantiate_dataproc_workflow_template(
+                        self._dataproc_cfg, workflow_template.name
+                    )
+                )"""
+
+
+            return OperationResult(successful=True, description="Tutto ok")
+
+
+    def _fetch_tasks_ids_in_groups(self, groups: [str]) -> [TaskSemaforo]:
+        str_groups=",".join(groups)
+        logger.debug(f"Retrieving tasks in groups {str_groups}")
+        tasks = self._repository.get_all_tasks_in_group(groups)
+        return tasks
+
+
+
+"""
             #TODO utilizzare il percorso relativo del file almeno fino alla cartella venv
             #venv_python = r'C:\Users\Utente\PyCharmProjects\ingestion_project\venv\Scripts\python.exe'
             # TODO eliminare se non si gira in locale con venv
@@ -108,12 +144,4 @@ class OrchestratorManager:
                 subprocess.run(cmd, check=True, text=True, shell=False)
                 #subprocess.run(cmd, check=True, text=True, shell=True)"""
 
-            return OperationResult(successful=True, description="Tutto ok")
-
-
-    def _fetch_tasks_ids_in_groups(self, groups: [str]) -> [TaskSemaforo]:
-        str_groups=",".join(groups)
-        logger.debug(f"Retrieving tasks in groups {str_groups}")
-        tasks = self._repository.get_all_tasks_in_group(groups)
-        return tasks
 
