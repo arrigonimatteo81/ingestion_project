@@ -38,24 +38,6 @@ class OrchestratorManager:
 
         logger.info("Orchestrator initialized")
 
-    @staticmethod
-    def create_workflow_template_name(run_id: str, groups: list, index:  int) -> str:
-        if not groups or not run_id:
-            raise ValueError(
-                "Group list and run_id are mandatory to create the template name"
-            )
-        groups = list(set(groups))  # removing duplicates
-        groups_lower = [g.lower() for g in groups]
-        groups_sorted = sorted(groups_lower)
-        groups_formatted = "_".join(g.replace(",", "") for g in groups_sorted)
-        workflow_id = f"wft-{run_id}-{groups_formatted}-{str(index).rjust(3,'0')}"
-        return workflow_id
-
-    @staticmethod
-    def chunked(tasks, size):
-        for i in range(0, len(tasks), size):
-            yield tasks[i:i + size]
-
     def start(self) -> OperationResult:
         logger.info("Running orchestrator manager")
         logger.info(
@@ -69,7 +51,7 @@ class OrchestratorManager:
         else:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
             todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks,
-                                                         self._max_tasks_per_workflow,self._dataproc_cfg, self._groups)
+                                                         self._max_tasks_per_workflow)
 
             for wf in todo_list:
                 logger.debug(f"Workflow template '{wf}' created")

@@ -75,45 +75,48 @@ class DataprocService:
 
     @staticmethod
     def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo],
-                         max_tasks_per_workflow: int, groups: [str]):
+                         max_tasks_per_workflow: int):
 
         logger.debug("Creating todo list...")
 
-        heavy = [t for t in tasks if t.is_heavy]
-        normal = [t for t in tasks if not t.is_heavy]
+        heavy_tasks = [t for t in tasks if t.is_heavy]
+        light_tasks = [t for t in tasks if not t.is_heavy]
 
-        workflows = []
-        wf_idx = 1
+        steps = []
+        previous_heavy_step_id = None
 
-        while heavy or normal:
-            wf_tasks = []
+        for task in heavy_tasks:
+            step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file)
 
-            if heavy:
-                wf_tasks.append(heavy.pop(0))
+            if previous_heavy_step_id:
+                step["prerequisite_step_ids"] = [previous_heavy_step_id]
 
-            while len(wf_tasks) < max_tasks_per_workflow and normal:
-                wf_tasks.append(normal.pop(0))
+            steps.append(step)
+            previous_heavy_step_id = step["step_id"]
 
-            steps = [
-                DataprocService.instantiate_task(
-                    task=task,
-                    run_id=run_id,
-                    config_file=config_file,
-                    repository=orchestrator_repository
-                )
-                for task in wf_tasks
-            ]
+        if len(heavy_tasks) > 0:
+            num_light_slots = max_tasks_per_workflow - 1
+        else:
+            num_light_slots = max_tasks_per_workflow
 
-            workflow_id = create_workflow_template_name(run_id, groups, wf_idx)
+        slots = [[] for _ in range(num_light_slots)]
 
-            workflows.append({
-                "workflow_template_id": f"{workflow_id}",
-                "jobs": steps
-            })
+        for idx, task in enumerate(light_tasks):
+            slots[idx % num_light_slots].append(task)
 
-            wf_idx += 1
+        for slot in slots:
+            previous_step_id = None
 
-        return workflows
+            for task in slot:
+                step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file)
+
+                if previous_step_id:
+                    step["prerequisite_step_ids"] = [previous_step_id]
+
+                steps.append(step)
+                previous_step_id = step["step_id"]
+
+        return steps
 
     @staticmethod
     def create_dataproc_workflow_template(
