@@ -1,3 +1,6 @@
+from typing import Optional
+
+from common.secrets import SecretRetriever
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_bigquery import TabBigQueryDest
@@ -12,13 +15,19 @@ logger = get_logger(__name__)
 
 class DestinationFactory:
     @staticmethod
-    def create_destination(destination_type: str, destination_id: str, config_file: str):
+    def create_destination(destination_type: str, destination_id: str, config_file: str,
+                      opt_secret_retriever: Optional[SecretRetriever] = None):
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
             if destination_type.upper() == DestinationType.JDBC.value:
                 jdbc_destination :TabJDBCDest = repository.get_jdbc_dest_info(destination_id)
-                return TableJDBCDestination(jdbc_destination.username,jdbc_destination.pwd, jdbc_destination.driver,
+                # semplice gestione del secret retriever, serve solo per jdbc perchè per ora è l'unica configurazione che richiede password
+                if jdbc_destination.pwd.upper().startswith("SECRET::"):
+                    secret_pwd = opt_secret_retriever.retrieve_secret(f"secrets.{jdbc_destination.username}")
+                else:
+                    secret_pwd = jdbc_destination.pwd
+                return TableJDBCDestination(jdbc_destination.username,secret_pwd, jdbc_destination.driver,
                                             jdbc_destination.url, jdbc_destination.tablename, jdbc_destination.overwrite, jdbc_destination.columns)
             elif destination_type.upper() == DestinationType.FILE.value:
                 file_destination: TabFileDest = repository.get_file_dest_info(destination_id)

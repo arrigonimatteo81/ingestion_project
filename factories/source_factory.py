@@ -1,3 +1,6 @@
+from typing import Optional
+
+from common.secrets import SecretRetriever
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_bigquery import TabBigQuerySource
@@ -16,17 +19,24 @@ logger = get_logger(__name__)
 class SourceFactory:
 
     @staticmethod
-    def create_source(source_type: str, source_id: str, config_file: str, cp : TabConfigPartitioning = None):
+    def create_source(source_type: str, source_id: str, config_file: str, cp : TabConfigPartitioning = None,
+                      opt_secret_retriever: Optional[SecretRetriever] = None):
 
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
             if source_type.upper() == SourceType.JDBC.value:
                 jdbc_source :TabJDBCSource = repository.get_jdbc_source_info(source_id)
+                #semplice gestione del secret retriever, serve solo per jdbc perchè per ora è l'unica configurazione che richiede password
+                if jdbc_source.pwd.upper().startswith("SECRET::"):
+                    secret_pwd = opt_secret_retriever.retrieve_secret(f"secrets.{jdbc_source.username}")
+                else:
+                    secret_pwd = jdbc_source.pwd
                 if jdbc_source.tablename:
-                    return TableJDBCSource(jdbc_source.username,jdbc_source.pwd, jdbc_source.driver, jdbc_source.url, jdbc_source.tablename)
+                    return TableJDBCSource(jdbc_source.username,secret_pwd, jdbc_source.driver, jdbc_source.url,
+                                           jdbc_source.tablename)
                 elif jdbc_source.query_text:
-                    return QueryJDBCSource(jdbc_source.username, jdbc_source.pwd, jdbc_source.driver,
+                    return QueryJDBCSource(jdbc_source.username, secret_pwd, jdbc_source.driver,
                                            jdbc_source.url, jdbc_source.query_text,
                                            cp.partitioning_expression,cp.num_partitions)
             elif source_type.upper() == SourceType.FILE.value:

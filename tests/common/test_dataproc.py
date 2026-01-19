@@ -188,6 +188,31 @@ class ToTestDataprocService(unittest.TestCase):
 
         self.assertEqual('step-uid2', ",".join(todo_list[3].get('prerequisite_step_ids')))
 
+    def test_number_of_tasks_create_to_do_list_with_multiple_dependencies(self):
+        todo_list = DataprocService.create_todo_list(TEST_APPLICATION_CONF, self.orchestrator_repo, TEST_RUN_ID,
+                                                    [TaskSemaforo("uid1", "source_1", "destination_1", "gruppo_1",
+                                                                  {"k1_1": "key1_1", "k2": "key2_1"},
+                                                                  {"p1_1": "param1_1", "p2_1": "param2_1"}),
+                                                     TaskSemaforo("uid2", "source_2", "destination_2", "gruppo_1",
+                                                                  {"k1_2": "key1_2", "k2": "key2_2"},
+                                                                  {"p1_2": "param1_2", "p2_2": "param2_2"}),
+                                                     TaskSemaforo("uid3", "source_3", "destination_4", "gruppo_1",
+                                                                  {"k1_3": "key1_3", "k2": "key2_3"},
+                                                                  {"p1_3": "param1_3", "p2_1": "param2_3"}),
+                                                     TaskSemaforo("uid4", "source_4", "destination_4", "gruppo_1",
+                                                                  {"k1_4": "key1_4", "k2": "key2_4"},
+                                                                  {"p1_4": "param1_4", "p2_4": "param2_4"}),
+                                                     TaskSemaforo("uid5", "source_5", "destination_5", "gruppo_1",
+                                                                  {"k1_5": "key1_5", "k2": "key2_5"},
+                                                                  {"p1_5": "param1_5", "p2_4": "param2_5"})
+                                                     ],
+                                                    2)
+
+        self.assertEqual('step-uid1', ",".join(todo_list[1].get('prerequisite_step_ids')))
+        self.assertEqual('step-uid3', ",".join(todo_list[2].get('prerequisite_step_ids')))
+
+
+
     def test_build_labels_with_all_labels(self):
         task1_job = DataprocService.instantiate_task(
             task=TaskSemaforo('uid1', 'source_1', 'destination_1', 'gruppo_1', key={"cod_abi": 3239, "cod_tabella": "REAGDG", "cod_provenienza": "AN"},

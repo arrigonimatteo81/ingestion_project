@@ -2,6 +2,7 @@ import getopt
 import sys
 
 from common.result import OperationResult
+from common.secrets import SecretRetrieverFactory
 from common.task_semaforo_payload import TaskSemaforoPayload
 from common.utils import get_logger, extract_field_from_file, download_from_gcs
 from factories.processor_manager_factory import ProcessorManagerFactory
@@ -11,10 +12,17 @@ logger = get_logger(__name__)
 
 
 def run_processor(run_id,task,config_file):
+    logger.debug("Reading secret_retriever_configuration field")
+    secret_retriever_configuration: dict = extract_field_from_file(file_path=config_file,
+                                                                   field_name="secrets.secret_retriever")
+    logger.debug(f"Secret retriever configuration: {secret_retriever_configuration}")
+    file_secret_retriever = SecretRetrieverFactory.from_dict(secret_retriever_configuration)
+    logger.debug(f"Created file_secret_retriever: {str(file_secret_retriever)}")
 
     logger.debug("Creating transformer")
     processor = ProcessorManagerFactory.create_processor_manager(
-        run_id=run_id, task=task, config_file=config_file
+        run_id=run_id, task=task, config_file=config_file,
+            opt_secret_retriever=file_secret_retriever
     )
     logger.info("Executing transformation task")
     processor_result: OperationResult = processor.start()

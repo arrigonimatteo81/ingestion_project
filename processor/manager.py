@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from google.cloud import bigquery
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
 from common.result import OperationResult
+from common.secrets import SecretRetriever
 from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
 from factories.registro_update_strategy_factory import RegistroUpdateStrategyFactory
@@ -21,13 +23,16 @@ from processor.update_strategy.registro_update_strategy import ExecutionResult
 logger = get_logger(__name__)
 
 class BaseProcessorManager (ABC):
-    def __init__(self,run_id: str, task: TaskSemaforo, config_file: str):
+    def __init__(self,run_id: str, task: TaskSemaforo, config_file: str,
+                 opt_secret_retriever: Optional[SecretRetriever] = None):
         self._run_id = run_id
         self._task = task
         self._config_file = config_file
         self._connection_string: str = extract_field_from_file(
             config_file, "CONNECTION_PARAMS"
         )
+        self._opt_secret_retriever: Optional[SecretRetriever] = opt_secret_retriever
+
         self._repository = ProcessorMetadata(MetadataLoader(self._connection_string))
         self._log_repository = TaskLogRepository(MetadataLoader(self._connection_string))
         self._registro_repository = RegistroRepository(MetadataLoader(self._connection_string))
@@ -38,7 +43,7 @@ class BaseProcessorManager (ABC):
 
         source_id,source_type = self._repository.get_source_info(self._task.uid)
         config_partitioning = self._repository.get_jdbc_source_partitioning_info(self._task.key)
-        task_source = SourceFactory.create_source(source_type, source_id, self._config_file, config_partitioning)
+        task_source = SourceFactory.create_source(source_type, source_id, self._config_file, config_partitioning, self._opt_secret_retriever)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
         )
@@ -49,7 +54,7 @@ class BaseProcessorManager (ABC):
         )
 
         destination_id, destination_type = self._repository.get_destination_info(self._task.uid)
-        task_destination = DestinationFactory.create_destination(destination_type, destination_id, self._config_file)
+        task_destination = DestinationFactory.create_destination(destination_type, destination_id, self._config_file, self._opt_secret_retriever)
         logger.info(
             f"Destination retrieved for task_id={self._task.uid}: {task_destination}"
         )

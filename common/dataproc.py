@@ -14,17 +14,7 @@ import time
 logger = get_logger(__name__)
 
 
-def create_workflow_template_name(run_id: str, groups: list, index: int) -> str:
-    if not groups or not run_id:
-        raise ValueError(
-            "Group list and run_id are mandatory to create the template name"
-        )
-    groups = list(set(groups))  # removing duplicates
-    groups_lower = [g.lower() for g in groups]
-    groups_sorted = sorted(groups_lower)
-    groups_formatted = "_".join(g.replace(",", "") for g in groups_sorted)
-    workflow_id = f"wft-{run_id}-{groups_formatted}-{str(index).rjust(3, '0')}"
-    return workflow_id
+
 
 
 class DataprocService:
@@ -56,6 +46,19 @@ class DataprocService:
                 },
                 "labels": DataprocService._build_labels(task, run_id)
             }
+
+    @staticmethod
+    def create_workflow_template_name(run_id: str, groups: list, idx: int) -> str:
+        if not groups or not run_id:
+            raise ValueError(
+                "Group list and run_id are mandatory to create the template name"
+            )
+        groups = list(set(groups))  # removing duplicates
+        groups_lower = [g.lower() for g in groups]
+        groups_sorted = sorted(groups_lower)
+        groups_formatted = "_".join(g.replace(",", "") for g in groups_sorted)
+        workflow_id = f"wft-{run_id}-{groups_formatted}-{str(idx).rjust(2,'0')}"
+        return workflow_id
 
     @staticmethod
     def _build_labels(task, run_id) -> dict:

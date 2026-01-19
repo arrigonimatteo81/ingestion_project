@@ -1,3 +1,6 @@
+from typing import Optional
+
+from common.secrets import SecretRetriever
 from common.utils import extract_field_from_file, get_logger
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
@@ -9,7 +12,8 @@ logger = get_logger(__name__)
 
 class ProcessorManagerFactory:
     @staticmethod
-    def create_processor_manager(run_id: str, task: TaskSemaforo, config_file: str) -> BaseProcessorManager:
+    def create_processor_manager(run_id: str, task: TaskSemaforo, config_file: str,
+            opt_secret_retriever: Optional[SecretRetriever] = None) -> BaseProcessorManager:
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
@@ -21,18 +25,21 @@ class ProcessorManagerFactory:
                 run_id=run_id,
                 task=task,
                 config_file=config_file,
+                opt_secret_retriever=opt_secret_retriever
                 )
             elif processor_type.upper() == ProcessorType.NATIVE.value:
                return NativeProcessorManager(
                 run_id=run_id,
                 task=task,
                 config_file=config_file,
+                opt_secret_retriever=opt_secret_retriever
                 )
             elif processor_type.upper() == ProcessorType.BIGQUERY.value:
                return BigQueryProcessorManager(
                 run_id=run_id,
                 task=task,
                 config_file=config_file,
+                opt_secret_retriever=opt_secret_retriever
                 )
             else:
                 logger.error("Unsupported processor type!!!")
