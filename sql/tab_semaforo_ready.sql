@@ -1,5 +1,19 @@
-create table public.tab_semaforo_ready as
-(select
+DROP TABLE if exists public.tab_semaforo_ready;
+
+CREATE TABLE public.tab_semaforo_ready (
+	uid uuid NULL,
+	source_id varchar(128) NULL,
+	destination_id varchar(128) NULL,
+	tipo_caricamento varchar NULL,
+	"key" jsonb NULL,
+	query_param jsonb NULL
+);
+GRANT SELECT,DELETE,UPDATE,TRUNCATE ON table public.tab_semaforo_ready TO fdir_app;
+
+insert into public.semaforo_ready
+select tb1.*, coalesce(is_heavy, false)  from
+(
+	(select
 	gen_random_uuid() as uid,s.tabella as source_id,s.tabella as destination_id,s.tipo_caricamento,s.key,
 	case
 			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ', 'DOMINI', 'Domini') then
@@ -16,7 +30,7 @@ create table public.tab_semaforo_ready as
             WHEN tipo_caricamento IN ('CLIENTI', 'Clienti')
                 THEN COALESCE(max_data_va, 20000101)
             ELSE
-                COALESCE(max_data_va, 20000101000000)
+                COALESCE(max_data_va, 20000101000000000)
         END
             )
 		end as query_param from
@@ -64,6 +78,6 @@ where
 		tabella as source_id,tabella as destination_id,
 		null as tipo_caricamento, null as key, null as query_param
 		from public.tab_no_semaforo
-);
-
-GRANT SELECT ON TABLE public.tab_semaforo_ready TO fdir_app; --utente
+)) tb1 left join 
+public.tab_task_configs
+on tb1.key = tab_task_configs.key

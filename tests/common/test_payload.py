@@ -5,7 +5,7 @@ from metadata.models.tab_tasks import TaskSemaforo
 
 class TestTaskSemaforoPayload(unittest.TestCase):
     def test_task_semaforo_payload_to_json(self):
-        task=TaskSemaforo('uid1','source_1','destination_1','gruppo_1',{'k1_1':'key1_1','k2':'key2_1'}, {'p1_1':'param1_1', 'p2_1': 'param2_1'})
+        task=TaskSemaforo('uid1','source_1','destination_1','gruppo_1',{'k1_1':'key1_1','k2':'key2_1'}, {'p1_1':'param1_1', 'p2_1': 'param2_1'}, is_heavy=True)
         payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.source_id, task.destination_id,
                                                            task.tipo_caricamento,
                                                            task.key, task.query_params)

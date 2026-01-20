@@ -11,4 +11,11 @@ CREATE TABLE public.tab_task_destinations (
 
 --ALTER TABLE public.tab_task_destinations ADD CONSTRAINT fk_tab_task_destinations FOREIGN KEY (destination_id) REFERENCES public.tab_tasks(destination_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
-GRANT SELECT ON table public.tab_task_destinations TO utente;
+GRANT SELECT ON table public.tab_task_destinations TO nplg_app;
+
+INSERT INTO public.tab_task_destinations
+(id, destination_id, destination_type)
+VALUES
+('REAGDG_STG', 'REAGDG_STG', 'file'),
+('READDR_STG', 'READDR_STG', 'file')
+;

@@ -10,4 +10,11 @@ CREATE TABLE public.tab_task_sources (
 
 --ALTER TABLE public.tab_task_sources ADD CONSTRAINT fk_tab_task_sources FOREIGN KEY (source_id) REFERENCES public.tab_tasks(source_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
-GRANT SELECT ON table public.tab_task_sources TO utente;
+GRANT SELECT ON table public.tab_task_sources TO nplg_app;
+
+INSERT INTO public.tab_task_sources
+(id, source_id, source_type)
+VALUES(
+('REAGDG', 'REAGDG', 'JDBC'),
+('READDR', 'READDR', 'JDBC')
+);

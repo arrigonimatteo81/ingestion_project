@@ -217,7 +217,7 @@ class ToTestDataprocService(unittest.TestCase):
         task1_job = DataprocService.instantiate_task(
             task=TaskSemaforo('uid1', 'source_1', 'destination_1', 'gruppo_1', key={"cod_abi": 3239, "cod_tabella": "REAGDG", "cod_provenienza": "AN"},
                               query_params={"id": 120957, "cod_abi": 3239, "num_ambito": 0, "max_data_va": 20000101, "cod_provenienza": "AN",
-                               "num_periodo_rif": 202511, "cod_colonna_valore": ""}),
+                               "num_periodo_rif": 202511, "cod_colonna_valore": ""}, is_heavy=True),
             repository=self.orchestrator_repo,
             run_id=TEST_RUN_ID,
             config_file=TEST_APPLICATION_CONF,
@@ -230,7 +230,7 @@ class ToTestDataprocService(unittest.TestCase):
         task1_job = DataprocService.instantiate_task(
             task=TaskSemaforo('uid1', 'source_1', 'destination_1', 'gruppo_1',
                               key={"cod_tabella": "REAGDG"},
-                              query_params={"id": 120957, }),
+                              query_params={"id": 120957, }, is_heavy=False),
             repository=self.orchestrator_repo,
             run_id=TEST_RUN_ID,
             config_file=TEST_APPLICATION_CONF,
