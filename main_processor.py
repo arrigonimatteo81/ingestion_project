@@ -1,6 +1,6 @@
 import getopt
 import sys
-
+from google.cloud import storage
 from common.result import OperationResult
 from common.secrets import SecretRetrieverFactory
 from common.task_semaforo_payload import TaskSemaforoPayload
@@ -28,24 +28,46 @@ def run_processor(run_id,task,config_file):
     processor_result: OperationResult = processor.start()
     return processor_result
 
+def show_usage():
+    print(
+        f"Usage: {sys.argv[0]} --run_id <run_id> --task_id <task_id> --config_file <config_file> --is_blocking <<true|false>>'\n"
+        f"Example: {sys.argv[0]} --run_id 202408281226 --task_id 1 --config_file gs://mybucket/application.conf --is_blocking false"
+    )
+
+
+def load_task_payload(file_path:str) -> TaskSemaforo:
+    client = storage.Client()
+    bucket_name, blob_name = file_path.replace("gs://", "").split("/", 1)
+    content = client.bucket(bucket_name).blob(blob_name).download_as_text()
+    payload = TaskSemaforoPayload.from_json(content)
+    return payload.to_domain()
+
+def delete_task_file(file_path: str):
+    """
+    Cancella il file JSON da GCS.
+    """
+    client = storage.Client()
+    bucket_name, blob_name = file_path.replace("gs://", "").split("/", 1)
+    client.bucket(bucket_name).blob(blob_name).delete()
 
 if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(
-            sys.argv[1:], "r:t:c:b:", ["run_id=", "task_id=", "config_file=", "is_blocking="]
+            sys.argv[1:], "r:t:c:b:", ["run_id=", "task=", "config_file=", "is_blocking="]
         )
 
         for opt, arg in opts:
             if opt in ("-r", "--run_id"):
                 run_id = arg
             elif opt in ("-t", "--task"):
-                task_payload = TaskSemaforoPayload.from_json(arg)
-                task: TaskSemaforo = task_payload.to_domain()
+                task_file=arg
+                task: TaskSemaforo = load_task_payload(task_file)
             elif opt in ("-c", "--config_file"):
                 config_file = arg
             elif opt in ("-b", "--is_blocking"):
                 is_blocking = arg.lower() == "true"
     except getopt.GetoptError:
+        show_usage()
         sys.exit(1)
 
     try:
@@ -65,6 +87,7 @@ if __name__ == "__main__":
             f"transformation task completed exited successfully: {processor_result.successful}"
         )
         if processor_result.successful:
+            delete_task_file(task_file)
             sys.exit(0)
         else:
             # logger.error(processor_result.description)

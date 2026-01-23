@@ -1,7 +1,10 @@
+import shlex
+
 from google.api_core.retry import Retry
 from google.api_core import retry as retries
+from google.cloud import storage
 from google.cloud.dataproc_v1 import WorkflowTemplate, WorkflowTemplateServiceClient, WorkflowMetadata, WorkflowGraph, \
-    WorkflowNode
+    WorkflowNode, WorkflowTemplatePlacement, ManagedCluster, ClusterSelector
 from google.api_core.operation import Operation
 from common.configuration import DataprocConfiguration
 from common.result import OperationResult
@@ -18,11 +21,33 @@ logger = get_logger(__name__)
 
 
 class DataprocService:
+
     @staticmethod
-    def instantiate_task (task: TaskSemaforo, repository: OrchestratorMetadata, run_id: str, config_file: str) -> dict:
+    def upload_task_payload(payload: TaskSemaforoPayload, bucket_name: str, object_prefix: str) -> str:
+        """
+        Salva il payload JSON su GCS e ritorna il path completo gs://bucket/object
+        """
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+
+        # Genera un object name unico
+        object_name = f"{object_prefix}/{payload.uid}.json"
+        blob = bucket.blob(object_name)
+
+        # Scrive il JSON su GCS
+        blob.upload_from_string(payload.to_json(), content_type="application/json")
+
+        return f"{bucket_name}/{object_name}"
+
+
+    @staticmethod
+    def instantiate_task (task: TaskSemaforo, repository: OrchestratorMetadata, run_id: str, config_file: str, bucket_name: str) -> dict:
         logger.debug(f"Instantiating task: {task} ...")
         payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.source_id, task.destination_id, task.tipo_caricamento,
                             task.key, task.query_params)
+
+        task_file_path = DataprocService.upload_task_payload(payload, bucket_name, object_prefix="tasks_payloads")
+
         task_type = repository.get_task_configuration(task.key)
 
         return {
@@ -33,7 +58,7 @@ class DataprocService:
                         "--run_id",
                         run_id,
                         "--task",
-                        payload.to_json(),
+                        task_file_path,
                         "--config_file",
                         config_file,
                         "--is_blocking",
@@ -78,7 +103,7 @@ class DataprocService:
 
     @staticmethod
     def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo],
-                         max_tasks_per_workflow: int):
+                         max_tasks_per_workflow: int, bucket: str):
 
         logger.debug("Creating todo list...")
 
@@ -89,7 +114,7 @@ class DataprocService:
         previous_heavy_step_id = None
 
         for task in heavy_tasks:
-            step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file)
+            step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file, bucket)
 
             if previous_heavy_step_id:
                 step["prerequisite_step_ids"] = [previous_heavy_step_id]
@@ -111,7 +136,7 @@ class DataprocService:
             previous_step_id = None
 
             for task in slot:
-                step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file)
+                step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file, bucket)
 
                 if previous_step_id:
                     step["prerequisite_step_ids"] = [previous_step_id]
@@ -129,7 +154,7 @@ class DataprocService:
     ) -> WorkflowTemplate:
         logger.debug("Creating workflow request...")
 
-        template_request: dict = DataprocService.create_workflow_template_request(
+        template_request: WorkflowTemplate = DataprocService.create_workflow_template_request(
             dataproc_configuration,
             tasks,
             workflow_id,
@@ -159,15 +184,20 @@ class DataprocService:
             dataproc_configuration: DataprocConfiguration,
             tasks,
             workflow_id: str,
-    ) -> dict:
+    ) -> WorkflowTemplate:
 
         logger.debug(f"Creating Dataproc workflow template with {len(tasks)} tasks")
-        template_request = {
-            "id": workflow_id,
-            "placement": dataproc_configuration.cluster_name,
-            "jobs": [tasks]
-        }
-        return template_request
+        return WorkflowTemplate(
+        id=workflow_id,
+        placement=WorkflowTemplatePlacement(
+            cluster_selector=ClusterSelector(
+                cluster_labels={
+                    "acronimo": "nplg0"
+                }
+            )
+        ),
+        jobs=tasks
+        )
 
     @staticmethod
     def create_workflow_client(

@@ -91,7 +91,9 @@ class OrchestratorMetadata:
         return TaskSemaforo(*row)
 
     def get_task_configuration(self, key: dict) -> TaskType:
-        sql = "SELECT * FROM public.tab_task_configs WHERE key <@ %s::jsonb ORDER by ( SELECT count(*) FROM jsonb_object_keys(key)) desc LIMIT 1;"
+        sql = """SELECT key,description,main_python_file,additional_python_file_uris,jar_file_uris,additional_file_uris,
+                archive_file_uris,logging_config ,dataproc_properties,processor_type 
+                FROM public.tab_task_configs WHERE key <@ %s::jsonb ORDER by ( SELECT count(*) FROM jsonb_object_keys(key)) desc LIMIT 1;"""
         row = self._loader.fetchone(
             sql,
             (json.dumps(key),)
@@ -217,13 +219,13 @@ class TaskLogRepository:
             periodo=ctx.query_params.get("num_periodo_rif")
         )
 
-    def insert_task_log_successful(self, ctx: TaskContext, rows_affected: int = 0):
+    def insert_task_log_successful(self, ctx: TaskContext):
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.SUCCESSFUL,
             task_log_description=f"task {ctx.run_id}-{ctx.key} concluso con successo",
-            rows_affected=rows_affected,
+            rows_affected=ctx.df.count(),
             periodo=ctx.query_params.get("num_periodo_rif")
         )
 
@@ -293,6 +295,51 @@ class TaskLogRepository:
             "error_message": error_message,
             "update_ts": update_ts,
             "rows_affected": rows_affected,
+        }
+
+        self._loader.execute(sql, params)
+
+    def insert_metric(self, ctx: TaskContext, num_rows:int, num_partitions: int, partition_sizes: str):
+        self.insert_metrics_log(
+            key_task=json.dumps(ctx.key),
+            run_id=ctx.run_id,
+            rows_affected=num_rows,
+            num_partitions=num_partitions,
+            partition_sizes=partition_sizes
+        )
+
+    def insert_metrics_log(
+            self,
+            key_task,
+            run_id: str,
+            rows_affected: int = 0,
+            num_partitions: int = 0,
+            partition_sizes: str = None
+
+    ):
+        sql = """
+        INSERT INTO public.tab_metrics_logs (
+            key,
+            run_id,
+            rows_affected,
+            num_partitions,
+            partition_sizes
+        )  
+        VALUES (
+            %(key)s,
+            %(run_id)s,
+            %(rows_affected)s,
+            %(num_partitions)s,
+            %(partition_sizes)s
+        )
+        """
+
+        params = {
+            "key": key_task,
+            "run_id": run_id,
+            "rows_affected": rows_affected,
+            "num_partitions": num_partitions,
+            "partition_sizes": partition_sizes
         }
 
         self._loader.execute(sql, params)

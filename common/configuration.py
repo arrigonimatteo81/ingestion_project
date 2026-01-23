@@ -1,6 +1,8 @@
+from enum import Enum
 from typing import Optional
 
 from common.environment import Environment
+from google.cloud.dataproc_v1 import JobPlacement
 
 class Configuration:
     """
@@ -17,6 +19,44 @@ class Configuration:
     def configurations(self):
         return self._configurations
 
+class WorkflowPlacementStrategy(Enum):
+    """
+    Enum representing different strategies to place a workflow on a DataprocCluster
+
+    Attributes:
+        MANAGED_CLUSTER: managed_cluster via cluster configuration
+        CLUSTER_SELECTOR: cluster selector via labels
+    """
+
+    MANAGED_CLUSTER = "managed_cluster"
+    CLUSTER_SELECTOR = "cluster_selector"
+
+    def __str__(self) -> str:
+        """
+        Returns the string representation of the Environment value.
+
+        Returns:
+            str: The string value of the Environment instance.
+        """
+        return self.value
+
+    @classmethod
+    def from_string(cls, workflow_placement_strategy_string: str) -> 'WorkflowPlacementStrategy':
+        """
+        Creates an WorkflowPlacementStrategy instance from a string in a case-insensitive way.
+
+        Raises:
+            ValueError: If the provided string doesn't match any Environment value.
+        """
+        normalized_string = workflow_placement_strategy_string.lower()
+
+        for strategy in cls:
+            if strategy.value == normalized_string:
+                return strategy
+
+        valid_values = [strategy.value for strategy in cls]
+        raise ValueError(
+            f"Invalid workflow placement strategy: '{workflow_placement_strategy_string}'. Valid values are: {valid_values}")
 class DataprocConfiguration:
     """
     A class that holds Dataproc-related configurations
@@ -64,6 +104,7 @@ class DataprocConfiguration:
         region = configuration.get("region")
         cluster_name = configuration.get("cluster_name")
         environment: Environment = Environment.from_string(configuration.get("environment"))
+
         poll_sleep_time_seconds = None
         if configuration.get("poll_sleep_time_seconds"):
             poll_sleep_time_seconds = int(configuration.get("poll_sleep_time_seconds"))
@@ -95,3 +136,46 @@ class DataprocConfiguration:
     @property
     def environment(self) -> Environment:
         return Environment.from_string(self._environment.value)
+
+
+class OrchestratorConfiguration:
+    """
+    A class that holds Orchestrator-related configurations
+    """
+    def __init__(
+            self,
+            bucket: str,
+            ingestion_max_contemporary_tasks: str
+    ):
+        if bucket:
+            self._bucket=bucket
+        else: raise ValueError("The 'bucket' parameter must be provided and cannot be empty.")
+
+        if ingestion_max_contemporary_tasks:
+            self._ingestion_max_contemporary_tasks=ingestion_max_contemporary_tasks
+        else:
+            raise ValueError(
+                "The 'ingestion_max_contemporary_tasks' parameter must be provided and cannot be empty."
+            )
+
+
+    def __repr__(self):
+        return f"OrchestratorConfiguration(bucket={self.bucket},ingestion_max_contemporary_tasks={self.ingestion_max_contemporary_tasks})"
+
+    @classmethod
+    def from_configuration(cls, configuration: Configuration):
+        bucket = configuration.get("bucket")
+        ingestion_max_contemporary_tasks = configuration.get("ingestion_max_contemporary_tasks")
+
+        return cls(
+            bucket=bucket,
+            ingestion_max_contemporary_tasks=ingestion_max_contemporary_tasks
+        )
+
+    @property
+    def bucket(self) -> str:
+        return self._bucket
+
+    @property
+    def ingestion_max_contemporary_tasks(self) -> str:
+        return self._ingestion_max_contemporary_tasks

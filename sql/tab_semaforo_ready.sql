@@ -6,11 +6,12 @@ CREATE TABLE public.tab_semaforo_ready (
 	destination_id varchar(128) NULL,
 	tipo_caricamento varchar NULL,
 	"key" jsonb NULL,
-	query_param jsonb NULL
+	query_param jsonb NULL,
+	is_heavy bool
 );
-GRANT SELECT,DELETE,UPDATE,TRUNCATE ON table public.tab_semaforo_ready TO fdir_app;
+GRANT SELECT,DELETE,UPDATE,TRUNCATE ON table public.tab_semaforo_ready TO nplg_app;
 
-insert into public.semaforo_ready
+insert into public.tab_semaforo_ready
 select tb1.*, coalesce(is_heavy, false)  from
 (
 	(select

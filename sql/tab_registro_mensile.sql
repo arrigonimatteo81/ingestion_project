@@ -5,7 +5,7 @@ CREATE TABLE public.tab_registro_mensile (
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-GRANT SELECT,insert,update,delete,truncate ON table public.tab_semaforo_ready TO fdir_app; --utente
+GRANT SELECT,insert,update,delete,truncate ON table public.tab_semaforo_ready TO nplg_app; --utente
 
 
 

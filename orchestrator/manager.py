@@ -1,6 +1,6 @@
 from google.cloud.dataproc_v1 import WorkflowTemplate
 
-from common.configuration import DataprocConfiguration, Configuration
+from common.configuration import DataprocConfiguration, Configuration, OrchestratorConfiguration
 from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
@@ -30,7 +30,7 @@ class OrchestratorManager:
 
         conf = Configuration(self._repository.get_all_configurations())
         self._dataproc_cfg = DataprocConfiguration.from_configuration(conf)
-        self._max_contemporary_tasks = int(conf.get("ingestion_max_contemporary_tasks"))
+        self._orchestrator_cfg = OrchestratorConfiguration.from_configuration(conf)
 
         logger.info("Orchestrator initialized")
 
@@ -53,7 +53,8 @@ class OrchestratorManager:
         else:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
             todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks,
-                                                         self._max_contemporary_tasks)
+                                                         int(self._orchestrator_cfg.ingestion_max_contemporary_tasks),
+                                                         self._orchestrator_cfg.bucket)
 
             workflow_id = DataprocService.create_workflow_template_name(self._run_id, self._groups, 1)
 

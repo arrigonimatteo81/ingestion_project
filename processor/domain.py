@@ -31,3 +31,4 @@ class TaskState(Enum):
 
 class Metric(Enum):
     MAX_DATA_VA = "max_data_va"
+    SPARK_METRICS = "spark_metrics"

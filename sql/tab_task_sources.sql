@@ -14,7 +14,7 @@ GRANT SELECT ON table public.tab_task_sources TO nplg_app;
 
 INSERT INTO public.tab_task_sources
 (id, source_id, source_type)
-VALUES(
+VALUES
 ('REAGDG', 'REAGDG', 'JDBC'),
 ('READDR', 'READDR', 'JDBC')
-);
+;

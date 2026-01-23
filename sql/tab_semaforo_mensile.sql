@@ -15,7 +15,7 @@ CREATE TABLE public.tab_semaforo_mensile (
 );
 
 
-GRANT TRUNCATE, INSERT, SELECT ON public.tab_semaforo_mensile TO nplg_app;--è necessario metterlo come owner per la replace della tabella
+GRANT TRUNCATE, INSERT, SELECT ON public.tab_semaforo_mensile TO nplg_app;
 
 
 INSERT INTO public.tab_semaforo_mensile

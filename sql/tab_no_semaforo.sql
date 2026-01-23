@@ -7,4 +7,4 @@ CREATE TABLE public.tab_no_semaforo (
 );
 
 
-GRANT TRUNCATE, INSERT, select ON public.tab_no_semaforo TO fdir_app;
+GRANT TRUNCATE, INSERT, select ON public.tab_no_semaforo TO nplg_app;

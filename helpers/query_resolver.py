@@ -1,14 +1,18 @@
 from dataclasses import dataclass
+from typing import Optional
+
+from pyspark.sql import DataFrame
 
 from metadata.models.tab_tasks import TaskSemaforo
 
 
-@dataclass(frozen=True)
+@dataclass
 class TaskContext:
     task: TaskSemaforo
     key: dict
     query_params: dict
     run_id: str
+    df: Optional[DataFrame] = None
     #registro_repo: RegistroMetadata
 
 class QueryResolver:

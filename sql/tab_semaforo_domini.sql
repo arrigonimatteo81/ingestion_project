@@ -15,4 +15,4 @@ CREATE TABLE public.tab_semaforo_domini (
 );
 
 
-GRANT TRUNCATE, INSERT, SELECT ON public.tab_semaforo_domini TO fdir_app;
+GRANT TRUNCATE, INSERT, SELECT ON public.tab_semaforo_domini TO nplg_app;

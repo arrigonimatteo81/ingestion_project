@@ -154,7 +154,7 @@ class TaskType:
 
     @classmethod
     def default(cls):
-        return cls(name="DEFAULT", description="Descrizione di default", main_python_file_uri="main_processor.py")
+        return cls(name="DEFAULT", description="Descrizione di default", main_python_file_uri="main_processor.py", dataproc_properties={"spark.submit.deployMode":"cluster"})
 
 
 @dataclass(frozen=True)

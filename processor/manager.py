@@ -17,7 +17,7 @@ from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, T
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
 from processor.domain import Metric
-from processor.update_strategy.post_task_action import UpdateRegistroAction
+from processor.update_strategy.post_task_action import UpdateRegistroAction, SparkMetricsAction
 from processor.update_strategy.registro_update_strategy import ExecutionResult
 
 logger = get_logger(__name__)
@@ -63,6 +63,7 @@ class BaseProcessorManager (ABC):
 
         post_actions = [
             UpdateRegistroAction(strategy,self._registro_repository),
+            SparkMetricsAction(self._log_repository)
         ]
         
         return task_source, task_is_blocking, task_destination, post_actions
@@ -95,18 +96,21 @@ class SparkProcessorManager (BaseProcessorManager):
             self._log_repository.insert_task_log_running(ctx)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
             task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
-
             session = self._get_spark_session()
             df = task_source.to_dataframe(session, ctx)
             task_destination.write(df)
+            ctx.df = df
             for action in post_actions:
                 required=action.required_metrics()
                 if required == Metric.MAX_DATA_VA:
                     er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
                 else:
-                    er:ExecutionResult = ExecutionResult()
+                    if required == Metric.SPARK_METRICS:
+                        er: ExecutionResult = ExecutionResult()
+                    else:
+                        er:ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
-            self._log_repository.insert_task_log_successful(ctx, df.count())
+            self._log_repository.insert_task_log_successful(ctx)#, ctx.get("count_df"))
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
