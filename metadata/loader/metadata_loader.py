@@ -299,11 +299,10 @@ class TaskLogRepository:
 
         self._loader.execute(sql, params)
 
-    def insert_metric(self, ctx: TaskContext, num_rows:int, num_partitions: int, partition_sizes: str):
+    def insert_metric(self, ctx: TaskContext, num_partitions: int, partition_sizes: str):
         self.insert_metrics_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
-            rows_affected=num_rows,
             num_partitions=num_partitions,
             partition_sizes=partition_sizes
         )
@@ -312,7 +311,6 @@ class TaskLogRepository:
             self,
             key_task,
             run_id: str,
-            rows_affected: int = 0,
             num_partitions: int = 0,
             partition_sizes: str = None
 
@@ -321,14 +319,12 @@ class TaskLogRepository:
         INSERT INTO public.tab_metrics_logs (
             key,
             run_id,
-            rows_affected,
             num_partitions,
             partition_sizes
         )  
         VALUES (
             %(key)s,
             %(run_id)s,
-            %(rows_affected)s,
             %(num_partitions)s,
             %(partition_sizes)s
         )
@@ -337,7 +333,6 @@ class TaskLogRepository:
         params = {
             "key": key_task,
             "run_id": run_id,
-            "rows_affected": rows_affected,
             "num_partitions": num_partitions,
             "partition_sizes": partition_sizes
         }

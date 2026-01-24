@@ -38,10 +38,9 @@ class SparkMetricsAction(PostTaskAction):
 
         df = ctx.df
 
-        num_rows = df.count()
         num_partitions = df.rdd.getNumPartitions()
         partition_sizes = df.rdd.mapPartitions(lambda it: [sum(1 for _ in it)]).collect()
-        self._log_repo.insert_metric(ctx,num_rows,num_partitions,",".join(map(str, partition_sizes)))
+        self._log_repo.insert_metric(ctx,num_partitions,",".join(map(str, partition_sizes)))
 
     def required_metrics(self):
         return "spark_metrics"

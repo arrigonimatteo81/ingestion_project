@@ -63,7 +63,7 @@ class BaseProcessorManager (ABC):
 
         post_actions = [
             UpdateRegistroAction(strategy,self._registro_repository),
-            #SparkMetricsAction(self._log_repository)
+            SparkMetricsAction(self._log_repository)
         ]
         
         return task_source, task_is_blocking, task_destination, post_actions

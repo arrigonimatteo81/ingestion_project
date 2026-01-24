@@ -15,7 +15,7 @@ insert into public.tab_semaforo_ready
 select tb1.*, coalesce(is_heavy, false)  from
 (
 	(select
-	gen_random_uuid() as uid,s.tabella as source_id,s.tabella as destination_id,s.tipo_caricamento,s.key,
+	gen_random_uuid() as uid,s.tabella as source_id,concat(s.tabella,'_STG') as destination_id,s.tipo_caricamento,s.key,
 	case
 			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ', 'DOMINI', 'Domini') then
             	jsonb_build_object('id',id)
