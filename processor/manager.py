@@ -63,7 +63,7 @@ class BaseProcessorManager (ABC):
 
         post_actions = [
             UpdateRegistroAction(strategy,self._registro_repository),
-            SparkMetricsAction(self._log_repository)
+            #SparkMetricsAction(self._log_repository)
         ]
         
         return task_source, task_is_blocking, task_destination, post_actions
@@ -105,10 +105,7 @@ class SparkProcessorManager (BaseProcessorManager):
                 if required == Metric.MAX_DATA_VA:
                     er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
                 else:
-                    if required == Metric.SPARK_METRICS:
-                        er: ExecutionResult = ExecutionResult()
-                    else:
-                        er:ExecutionResult = ExecutionResult()
+                    er: ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
             self._log_repository.insert_task_log_successful(ctx)#, ctx.get("count_df"))
             logger.debug(f"task {self._task.uid} concluso con successo")

@@ -1,21 +1,7 @@
-source .venv/bin/activate
-python3 main_orchestrator.py -r 20251228_115000 -g TEST_GROUP -c application.conf
-----------------------------------
-class BigQueryNativeDestination(Destination): # scrittura diretta di tabella bigquery (native, non tramite Spark)
-
-    def write_rows(self, rows, ctx: TaskContext):
-        client = bigquery.Client()
-        table_id = self.table_id
-
-        rows_to_insert = [
-            dict(zip(self.columns, row))
-            for row in rows
-        ]
-
-        errors = client.insert_rows_json(table_id, rows_to_insert)
-
-        if errors:
-            raise RuntimeError(errors)
-
-
-
+| Volume stimato | numPartitions  |
+| -------------- | -------------- |
+| < 1M           | 1              |
+| 1–5M           | 2              |
+| 5–20M          | 4              |
+| 20–50M         | 8              |
+| >50M           | 12 *(DEV max)* |
