@@ -11,6 +11,7 @@ class TaskSemaforoPayload:
     uid: str
 
     # configurazione tecnica
+    logical_table: str
     source_id: str
     destination_id: str
     tipo_caricamento: str
@@ -29,6 +30,7 @@ class TaskSemaforoPayload:
     def to_domain(self) -> TaskSemaforo:
         return TaskSemaforo(
             uid=self.uid,
+            logical_table=self.logical_table,
             source_id=self.source_id,
             destination_id=self.destination_id,
             tipo_caricamento=self.tipo_caricamento,

@@ -15,4 +15,4 @@ CREATE TABLE public.tab_bigquery_destinations (
 
 ALTER TABLE public.tab_bigquery_destinations ADD CONSTRAINT fk_tab_bigquery_destinations FOREIGN KEY (destination_id) REFERENCES public.tab_task_destinations(destination_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
-GRANT SELECT ON table public.tab_bigquery_destinations TO fir_app;
+GRANT SELECT ON table public.tab_bigquery_destinations TO nplg_app;

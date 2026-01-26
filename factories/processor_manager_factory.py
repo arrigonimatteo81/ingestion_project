@@ -12,29 +12,29 @@ logger = get_logger(__name__)
 
 class ProcessorManagerFactory:
     @staticmethod
-    def create_processor_manager(run_id: str, task: TaskSemaforo, config_file: str,
+    def create_processor_manager(run_id: str, task: TaskSemaforo, config_file: str, layer:str,
             opt_secret_retriever: Optional[SecretRetriever] = None) -> BaseProcessorManager:
         connection_string = extract_field_from_file(config_file, "CONNECTION_PARAMS")
         repository = ProcessorMetadata(MetadataLoader(connection_string))
         try:
-            processor_type = repository.get_task_processor_type(task.key)
+            processor_type = repository.get_task_processor_type(task.source_id, layer)
             logger.debug(f"Processor type for task {task.uid}: {processor_type}")
 
-            if processor_type.upper() == ProcessorType.SPARK.value:
+            if processor_type == ProcessorType.SPARK:
                return SparkProcessorManager(
                 run_id=run_id,
                 task=task,
                 config_file=config_file,
                 opt_secret_retriever=opt_secret_retriever
                 )
-            elif processor_type.upper() == ProcessorType.NATIVE.value:
+            elif processor_type == ProcessorType.NATIVE:
                return NativeProcessorManager(
                 run_id=run_id,
                 task=task,
                 config_file=config_file,
                 opt_secret_retriever=opt_secret_retriever
                 )
-            elif processor_type.upper() == ProcessorType.BIGQUERY.value:
+            elif processor_type == ProcessorType.BIGQUERY:
                return BigQueryProcessorManager(
                 run_id=run_id,
                 task=task,

@@ -58,17 +58,46 @@ GRANT SELECT ON table public.tab_task_configs TO nplg_app;
 INSERT INTO public.tab_task_configs
 ("key", description, main_python_file, jar_file_uris, dataproc_properties, processor_type, is_heavy)
 VALUES
-('{"cod_abi": 1025, "cod_tabella": "REAGDG", "cod_provenienza": "AN"}', 'configurazione per REAGDG banca 1025', 'main_processor.py',
- '{jar/mssql-jdbc-12.2.0.jre11.jar}', '{ "spark.executor.memory": "6G", "spark.driver.memory": "4G", "spark.executor.cores": "4","spark.executor.instances": "4", "spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.dynamicAllocation.initialExecutors": "3", "spark.sql.shuffle.partitions": "20"}',
- 'spark', true),
- ('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "N1"}', 'configurazione per READDR banca 1025 provenienza N1', 'main_processor.py',
- '{jar/mssql-jdbc-12.2.0.jre11.jar}', '{ "spark.executor.memory": "6G", "spark.driver.memory": "4G", "spark.executor.cores": "4","spark.executor.instances": "4", "spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.dynamicAllocation.initialExecutors": "3", "spark.sql.shuffle.partitions": "20"}',
- 'spark', true),
- ('{"cod_abi": 3296, "cod_tabella": "READDR", "cod_provenienza": "DP"}', 'configurazione per READDR banca 3296 provenienza DP', 'main_processor.py',
- '{jar/mssql-jdbc-12.2.0.jre11.jar}', '{ "spark.executor.memory": "6G", "spark.driver.memory": "4G", "spark.executor.cores": "4","spark.executor.instances": "4", "spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.dynamicAllocation.initialExecutors": "3", "spark.sql.shuffle.partitions": "20"}',
- 'spark', true),
-('{}','configurazione di default','main_processor.py','{jar/mssql-jdbc-12.2.0.jre11.jar,jar/postgresql-42.7.8.jar}',NULL,'spark',false)
-
+('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "N1"}'::jsonb, 'configurazione per READDR banca 1025 provenienza N1', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 1025, "cod_tabella": "REAGDG", "cod_provenienza": "AN"}'::jsonb, 'configurazione per REAGDG banca 1025', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "CA"}'::jsonb, 'configurazione per READDR banca 1025 provenienza CA', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "N3"}'::jsonb, 'configurazione per READDR banca 1025 provenienza N3', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "TF"}'::jsonb, 'configurazione per READDR banca 1025 provenienza TF', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{}'::jsonb, 'configurazione di default', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "1","spark.driver.memory": "2g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', false),
+('{"cod_abi": 3296, "cod_tabella": "READDR", "cod_provenienza": "DP"}'::jsonb, 'configurazione per READDR banca 3296 provenienza DP', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "M2"}'::jsonb, 'configurazione per READDR banca 1025 provenienza M2', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 1025, "cod_tabella": "READDR", "cod_provenienza": "VR"}'::jsonb, 'configurazione per READDR banca 1025 provenienza VR', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true),
+('{"cod_abi": 3296, "cod_tabella": "READDR", "cod_provenienza": "DN"}'::jsonb, 'configurazione per READDR banca 3296 provenienza DP', 'gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/main_processor.py', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/ingestion_process-1.0.0-py3-none-any.whl}', '{gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/mssql-jdbc-12.2.0.jre11.jar,gs://bkt-isp-nplg0-appl-svil-001-ew12/test_workflow/jar/postgresql-42.7.8.jar}', NULL, NULL, NULL, '{ "spark.driver.cores" : "2","spark.driver.memory": "4g", "spark.executor.memory": "12g", "spark.executor.cores": "4",
+ "spark.default.parallelism": "12","spark.ui.enabled" : "true", "spark.sql.adaptive.enabled": "true", "spark.sql.adaptive.coalescePartitions.enabled":"true", 
+"spark.sql.adaptive.skewJoin.enabled":"true","spark.sql.shuffle.partitions": "12","spark.dynamicAllocation.enabled":"true","spark.shuffle.service.enabled":"true",
+"spark.dynamicAllocation.minExecutors":"1","spark.dynamicAllocation.initialExecutors":"3","spark.dynamicAllocation.maxExecutors":"5","spark.submit.deployMode":"cluster"}'::json, 'spark', true)
 
 DROP TABLE if exists public.tab_registro_mensile;
 
@@ -287,9 +316,31 @@ GRANT SELECT ON table public.tab_file_destinations TO nplg_app;
 INSERT INTO public.tab_file_destinations
 (destination_id, format_file, gcs_path, overwrite, csv_separator)
 VALUES
-('REAGDG_STG', 'parquet', 'gs://bkt-isp-nplg0-dpstg-svil-001-ew12/staging/REAGDG_STG', false, NULL),
-('READDR_STG', 'parquet', 'gs://bkt-isp-nplg0-dpstg-svil-001-ew12/staging/READDR_STG', false, NULL)
-;
+('READDR_STG', 'parquet', 'gs://bkt-isp-nplg0-dpstg-svil-001-ew12/staging/READDR_STG', false, NULL);
+
+
+drop table if exists public.tab_bigquery_destinations;
+
+CREATE TABLE public.tab_bigquery_destinations (
+	destination_id varchar NOT NULL,
+	project varchar NOT NULL,
+	dataset varchar NOT NULL,
+	tablename varchar NOT NULL,
+	gcs_bucket varchar NULL,
+	use_direct_write bool NULL,
+	columns  JSONB,
+	overwrite bool NULL,
+	CONSTRAINT check_one_column_populated CHECK ((((gcs_bucket IS NULL) AND (use_direct_write = true)) OR ((gcs_bucket IS NOT NULL) AND (use_direct_write = false)))),
+    CONSTRAINT tab_bigquery_destinations_pk PRIMARY KEY (destination_id)
+);
+
+ALTER TABLE public.tab_bigquery_destinations ADD CONSTRAINT fk_tab_bigquery_destinations FOREIGN KEY (destination_id) REFERENCES public.tab_task_destinations(destination_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+GRANT SELECT ON table public.tab_bigquery_destinations TO nplg_app;
+
+INSERT INTO public.tab_bigquery_destinations
+(destination_id, project, dataset, tablename, gcs_bucket, use_direct_write, "columns", overwrite)
+VALUES('REAGDG_STG', 'prj-isp-nplg0-appl-svil-001', 'NPLG0W', 'TB_REAGDG_SG', NULL, true, '["NUM_BANCA", "COD_NDG", "COD_INTESTAZIONE", "COD_FISCALE", "COD_TIP_NDG", "COD_PIVA", "COD_STATO_NDG", "COD_SPECIE_GIURIDICA", "COD_UO_CAPOFILA", "COD_DATA_NASC_COST", "COD_COMUNE_NASCITA", "COD_PROVNC_NASCT_COST", "COD_CAP_RESIDENZA", "DES_COMUNE_RESIDENZA", "COD_PROVINCIA_RESIDENZA", "COD_SOTTOSEGMENTO_ECONOMICO", "COD_SOTTOSEGMENTO_COMMERCIALE", "COD_CLI_NOPROFIT", "COD_SEGMENTO_ECONOMICO", "COD_PTF_CDG", "COD_UTENZA_MODULO", "COD_SEGM_CDG", "COD_DESK_CLIENTE", "COD_CLASSE_SOA_UO_PTF", "COD_MODULO_CDG", "COD_GESTORE_REMOTO", "COD_RIF_REGOLA_DESK", "COD_BU_TERRTRL", "COD_TIP_GESTR_GRM", "COD_ATECO", "COD_TIP_GESTR_INDUSTRY", "COD_RAE", "COD_BU", "COD_SAE", "COD_GRM", "COD_SESSO", "COD_UTENZA_GRM", "COD_CAPO_INDUSTRY", "COD_NDG_PREVLNT", "COD_ABI_SNDG_NDG_PREV", "COD_SNDG_NDG_PREV", "COD_FLG_RESIDENTE", "COD_RILVNZ_ARTCL_136_TUB", "COD_RILVNZ_ARTCL_53_TUB", "COD_RILVNZ_CONSOB", "COD_RILVNZ_IAS_24", "COD_NDG_NO_PUSP", "COD_TIP_GESTN", "COD_FLG_CAPO_FILR", "COD_FLG_APPRTNZ_FILR", "COD_SAG", "COD_MACRO_CLUSTER_RATING", "COD_CLUSTER_RATING", "COD_CLASSE_UNICA_RATING", "COD_PD_MEDIA", "COD_PROV_RATING", "COD_COLORE_CLASSE_CRA", "COD_CLASSE_RATING_PIU_CRA", "COD_CDN", "COD_SEGMENTO_REGOLAMENTARE", "COD_SEGMENTO_COMPORTAMENTALE", "COD_FLG_CONDIVISO", "NUM_DATA_VA", "NUM_DATA_INS", "NUM_PERIODO_RIF", "NUM_PERIODO_COMP"]'::jsonb, false);
 
 
 DROP table if exists public.tab_task_logs;

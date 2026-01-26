@@ -79,9 +79,9 @@ class OrchestratorMetadata:
         }
         return configs
 
-    def get_all_tasks_in_group(self, groups: [str]) -> [TaskSemaforo]:
-        sql = (f'SELECT uid, source_id, destination_id, tipo_caricamento, "key", query_param, is_heavy '
-               f'FROM public.tab_semaforo_ready where tipo_caricamento = ANY(%s)')
+    def get_all_tasks_in_group(self, groups: [str], table: str) -> [TaskSemaforo]:
+        sql = (f'SELECT uid, logical_table, source_id, destination_id, tipo_caricamento, "key", query_param, is_heavy '
+               f'FROM {table} where tipo_caricamento = ANY(%s)')
         rows = self._loader.fetchall(sql, (groups,))
         return [TaskSemaforo(*r) for r in rows]
 
@@ -92,7 +92,7 @@ class OrchestratorMetadata:
 
     def get_task_configuration(self, key: dict) -> TaskType:
         sql = """SELECT key,description,main_python_file,additional_python_file_uris,jar_file_uris,additional_file_uris,
-                archive_file_uris,logging_config ,dataproc_properties,processor_type 
+                archive_file_uris,logging_config ,dataproc_properties
                 FROM public.tab_task_configs WHERE key <@ %s::jsonb ORDER by ( SELECT count(*) FROM jsonb_object_keys(key)) desc LIMIT 1;"""
         row = self._loader.fetchone(
             sql,
@@ -107,23 +107,25 @@ class ProcessorMetadata:
     def __init__(self, loader: MetadataLoader):
         self._loader = loader
 
-    def get_task_is_blocking(self, task_id: str) -> bool:
-        sql = "SELECT coalesce(is_blocking,True) as is_blocking FROM public.tab_tasks where id = %s'"
-        row = self._loader.fetchone(sql,(task_id,))
+    def get_task_is_blocking(self, logical_table_name: str, layer:str) -> bool:
+        sql = "SELECT coalesce(is_blocking,True) as is_blocking from public.tab_table_configs where logical_table = % s and layer = %s"
+        row = self._loader.fetchone(sql,(logical_table_name,layer))
         return bool(row[0])
 
-    def get_task_processor_type(self, key: dict) -> str:
-        sql = 'select processor_type from public.tab_task_configs where "key"= %s'
-        row = self._loader.fetchone(sql, (json.dumps(key),))
-        if row is None:
-            return ProcessorType.SPARK.value
+    def get_task_processor_type(self, logical_table_name: str, layer:str) -> ProcessorType:
+        sql = 'select processor_type from public.tab_table_configs where logical_table= %s and layer=%s'
+        row = self._loader.fetchone(sql, (logical_table_name,layer))
         return row[0]
 
-    def get_source_info(self, task_id: str) -> (str,str):
-        sql=("SELECT b.source_id, b.source_type FROM public.tab_semaforo_ready a join public.tab_task_sources b "
-            "on a.source_id = b.source_id  where a.uid =%s")
-        row = self._loader.fetchone(sql, (task_id,))
-        return row
+    def get_task_has_next(self, logical_table_name: str, layer:str) -> bool:
+        sql = 'select has_next from public.tab_table_configs where logical_table= %s and layer=%s'
+        row = self._loader.fetchone(sql, (logical_table_name,layer))
+        return row[0]
+
+    def get_source_info(self, source_id: str) -> str:
+        sql="SELECT source_type FROM public.tab_task_sources where source_id =%s"
+        row = self._loader.fetchone(sql, (source_id,))
+        return row[0]
 
     def get_jdbc_source_partitioning_info(self, key: dict) -> TabConfigPartitioning:
         sql = (
@@ -149,11 +151,10 @@ class ProcessorMetadata:
         row = self._loader.fetchone(sql, (source_id,))
         return TabBigQuerySource(*row)
 
-    def get_destination_info(self, task_id: str) -> (str,str):
-        sql = (f"SELECT b.destination_id, b.destination_type FROM public.tab_semaforo_ready a join public.tab_task_destinations b "
-                    f"on a.destination_id = b.destination_id where a.uid = %s")
-        row = self._loader.fetchone(sql, (task_id,))
-        return row
+    def get_destination_info(self, destination_id: str) -> str:
+        sql = f"SELECT destination_type FROM public.tab_task_destinations where destination_id = %s"
+        row = self._loader.fetchone(sql, (destination_id,))
+        return row[0]
 
     def get_jdbc_dest_info(self, destination_id: str) -> TabJDBCDest:
         sql = "SELECT url,username,pwd,driver,tablename, columns, overwrite FROM public.tab_jdbc_destinations where destination_id = %s"

@@ -43,7 +43,7 @@ class DataprocService:
     @staticmethod
     def instantiate_task (task: TaskSemaforo, repository: OrchestratorMetadata, run_id: str, config_file: str, bucket_name: str) -> dict:
         logger.debug(f"Instantiating task: {task} ...")
-        payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.source_id, task.destination_id, task.tipo_caricamento,
+        payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.logical_table, task.source_id, task.destination_id, task.tipo_caricamento,
                             task.key, task.query_params)
 
         task_file_path = DataprocService.upload_task_payload(payload, bucket_name, object_prefix="tasks_payloads")

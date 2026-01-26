@@ -11,7 +11,7 @@ from metadata.models.tab_tasks import TaskSemaforo
 logger = get_logger(__name__)
 
 
-def run_processor(run_id,task,config_file):
+def run_processor(run_id,task,config_file, layer):
     logger.debug("Reading secret_retriever_configuration field")
     secret_retriever_configuration: dict = extract_field_from_file(file_path=config_file,
                                                                    field_name="secrets.secret_retriever")
@@ -21,7 +21,7 @@ def run_processor(run_id,task,config_file):
 
     logger.debug("Creating transformer")
     processor = ProcessorManagerFactory.create_processor_manager(
-        run_id=run_id, task=task, config_file=config_file,
+        run_id=run_id, task=task, config_file=config_file,layer=layer,
             opt_secret_retriever=file_secret_retriever
     )
     logger.info("Executing transformation task")
@@ -53,7 +53,7 @@ def delete_task_file(file_path: str):
 if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(
-            sys.argv[1:], "r:t:c:b:", ["run_id=", "task=", "config_file=", "is_blocking="]
+            sys.argv[1:], "r:t:c:b:l:", ["run_id=", "task=", "config_file=", "is_blocking=", "layer="]
         )
 
         for opt, arg in opts:
@@ -66,13 +66,15 @@ if __name__ == "__main__":
                 config_file = arg
             elif opt in ("-b", "--is_blocking"):
                 is_blocking = arg.lower() == "true"
+            elif opt in ("-l", "--layer"):
+                layer = arg.lower() == "stage"
     except getopt.GetoptError:
         show_usage()
         sys.exit(1)
 
     try:
         print(
-            f"Starting processor_main with run_id: {run_id}, task_id: {task.uid}, config_file: {config_file}, is_blocking: {is_blocking}"
+            f"Starting processor_main with run_id: {run_id}, task_id: {task.uid}, config_file: {config_file}, is_blocking: {is_blocking}, layer: {layer}"
         )
         if config_file.lower().startswith("gs://"):
             logger.info(f"Download {config_file} from gcs...")
@@ -82,7 +84,7 @@ if __name__ == "__main__":
                 f"Skipping download json from gcs since {config_file} doesn't start with gcs"
             )
 
-        processor_result = run_processor(run_id,task,config_file)
+        processor_result = run_processor(run_id,task,config_file, layer)
         logger.info(
             f"transformation task completed exited successfully: {processor_result.successful}"
         )

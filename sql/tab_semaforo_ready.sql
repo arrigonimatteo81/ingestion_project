@@ -2,6 +2,7 @@ DROP TABLE if exists public.tab_semaforo_ready;
 
 CREATE TABLE public.tab_semaforo_ready (
 	uid uuid NULL,
+	logical_table varchar NOT NULL,
 	source_id varchar(128) NULL,
 	destination_id varchar(128) NULL,
 	tipo_caricamento varchar NULL,
@@ -12,10 +13,10 @@ CREATE TABLE public.tab_semaforo_ready (
 GRANT SELECT,DELETE,UPDATE,TRUNCATE ON table public.tab_semaforo_ready TO nplg_app;
 
 insert into public.tab_semaforo_ready
-select tb1.*, coalesce(is_heavy, false)  from
+select tb1.*, coalesce(is_heavy, false)as is_heavy  from
 (
 	(select
-	gen_random_uuid() as uid,s.tabella as source_id,concat(s.tabella,'_STG') as destination_id,s.tipo_caricamento,s.key,
+	gen_random_uuid() as uid,s.tabella as logical_table, s.tabella as source_id,s.stage as destination_id,s.tipo_caricamento,s.key,
 	case
 			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ', 'DOMINI', 'Domini') then
             	jsonb_build_object('id',id)
@@ -38,6 +39,7 @@ select tb1.*, coalesce(is_heavy, false)  from
 (select
 		id,
 		tabella,
+		ttc.stage,
 		tipo_caricamento ,
 		colonna_valore,
 		ambito,cod_abi,provenienza,periodo_rif,
@@ -46,7 +48,8 @@ select tb1.*, coalesce(is_heavy, false)  from
 		else jsonb_build_object('cod_abi',cod_abi,'cod_tabella',tabella,'cod_provenienza',provenienza)
 		end as key
 	from
-		public.tab_semaforo_mensile
+		public.tab_semaforo_mensile s left join public.tab_table_configs ttc
+		on s.tabella=ttc.logical_table
 		) s
 		left join public.tab_registro_mensile r
     on
@@ -57,17 +60,18 @@ where
 ) union all
 (
 select
-	gen_random_uuid() as uid,s.tabella as source_id,s.tabella as destination_id,s.tipo_caricamento,s.key,
+	gen_random_uuid() as uid,s.tabella as source_id,s.stage as destination_id,s.tipo_caricamento,s.key,
 	jsonb_build_object('id',id) 	as query_param from
 (select
 		id,
-		tabella,
+		tabella,ttc.stage,
 		tipo_caricamento ,
 		colonna_valore,
 		ambito,cod_abi,provenienza, periodo_rif,
 		jsonb_build_object('cod_tabella',tabella) as key
 	from
-		public.tab_semaforo_domini) s
+		public.tab_semaforo_domini s left join public.tab_table_configs ttc
+		on s.tabella=ttc.logical_table) s
 		left join public.tab_registro_mensile r
     on
 	r.chiave = s.key
@@ -76,9 +80,11 @@ where
 	or s.id > r.last_id
 ) union all
 (select  gen_random_uuid() as uid,
-		tabella as source_id,tabella as destination_id,
+		tabella as source_id,ttc.stage as destination_id,
 		null as tipo_caricamento, null as key, null as query_param
-		from public.tab_no_semaforo
-)) tb1 left join 
+		from public.tab_no_semaforo s left join public.tab_table_configs ttc
+		on s.tabella=ttc.logical_table
+)
+) tb1 left join
 public.tab_task_configs
 on tb1.key = tab_task_configs.key

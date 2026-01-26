@@ -1,25 +1,45 @@
 import os
 import unittest
+from unittest.mock import MagicMock
 
-from orchestrator.manager import OrchestratorManager
-from tests.orchestrator.test_metadata import TestOrchestratorMetadata
+from common.result import OperationResult
+from metadata.models.tab_tasks import TaskSemaforo
+from orchestrator.manager import IngestionOrchestratorManager
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
-TEST_CONFIG_FILE = f"{test_dir}/resources/application.conf"
+CONF_PATH = f"{test_dir}/resources/application.conf"
+class TestOrchestratorManager(unittest.TestCase):
 
-TEST_REPOSITORY: TestOrchestratorMetadata = TestOrchestratorMetadata()
-
-
-class TestOrchestrator(unittest.TestCase):
     def setUp(self):
-        self.orchestrator = OrchestratorManager(
-            run_id="TestOrchestrator",
-            config_file=TEST_CONFIG_FILE,
-            repository=TEST_REPOSITORY,
+        self.mock_repo = MagicMock()
+        self.mock_repo.get_all_tasks_in_group.return_value = [
+            TaskSemaforo("uid", "source_id", "destination_id", "tipo_caricamento", {"key":"val"}, {"key":"val"}, True),
+        ]
+        self.mock_repo.get_all_configurations.return_value = {"region":"europe-west12","poll_sleep_time_seconds":60,"cluster_name":	"dprcpclt-isp-nplg0-svil-ew12-01",
+                                                            "environment": "svil", "project": "prj-isp-nplg0-appl-svil-001",
+                                                              "bucket": "bkt-isp-nplg0-dptmp-svil-001-ew12",
+                                                              "ingestion_max_contemporary_tasks":	8}
+
+        self.manager = IngestionOrchestratorManager(
+            run_id="r1",
+            config_file=CONF_PATH,
+            groups=["g1"],
+            repository=self.mock_repo
         )
 
-    def test_fetch_unique_tasks_in_group(self):
-        groups = ["GRP_REPORT1", "GRP_REPORT2"]
-        actual_tasks: set = self.orchestrator._fetch_tasks_ids_in_groups(groups)
-        expected_tasks: set = {"DM", "KPI1", "REPORT1", "KPI2", "REPORT2"}
-        self.assertEqual(actual_tasks, expected_tasks)
+
+    def test_start_with_tasks(self):
+        result = self.manager.start()
+        self.assertIsInstance(result, OperationResult)
+        self.assertTrue(result.successful)
+
+
+    def test_start_no_tasks(self):
+        self.mock_repo.get_all_tasks_in_group.return_value = []
+        result = self.manager.start()
+        self.assertFalse(result.successful)
+        self.assertIn("No tasks found", result.description)
+
+
+    if __name__ == "__main__":
+        unittest.main()

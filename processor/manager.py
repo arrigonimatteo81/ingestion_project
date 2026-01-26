@@ -5,6 +5,7 @@ from google.cloud import bigquery
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
+from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.result import OperationResult
 from common.secrets import SecretRetriever
 from common.utils import extract_field_from_file, get_logger
@@ -24,7 +25,7 @@ logger = get_logger(__name__)
 
 class BaseProcessorManager (ABC):
     def __init__(self,run_id: str, task: TaskSemaforo, config_file: str,
-                 opt_secret_retriever: Optional[SecretRetriever] = None):
+                 layer: str, opt_secret_retriever: Optional[SecretRetriever] = None):
         self._run_id = run_id
         self._task = task
         self._config_file = config_file
@@ -32,29 +33,30 @@ class BaseProcessorManager (ABC):
             config_file, "CONNECTION_PARAMS"
         )
         self._opt_secret_retriever: Optional[SecretRetriever] = opt_secret_retriever
-
         self._repository = ProcessorMetadata(MetadataLoader(self._connection_string))
         self._log_repository = TaskLogRepository(MetadataLoader(self._connection_string))
         self._registro_repository = RegistroRepository(MetadataLoader(self._connection_string))
+        self._layer=layer
 
     def _get_common_data(self):
         """Retrieve common data needed by all processor types"""
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
-        source_id,source_type = self._repository.get_source_info(self._task.uid)
+        source_type = self._repository.get_source_info(self._task.source_id)
         config_partitioning = self._repository.get_jdbc_source_partitioning_info(self._task.key)
-        task_source = SourceFactory.create_source(source_type, source_id, self._config_file, config_partitioning, self._opt_secret_retriever)
+        task_source = SourceFactory.create_source(source_type, self._task.source_id, self._config_file, config_partitioning, self._opt_secret_retriever)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
         )
 
-        task_is_blocking: bool = True #self._repository.get_task_is_blocking(self._task_id)
+        task_is_blocking: bool = self._repository.get_task_is_blocking(self._task.logical_table, self._layer)
+        has_next_step: bool = self._repository.get_task_has_next(self._task.logical_table, self._layer)
         logger.info(
             f"Retrieve task info is_blocking for task_id={self._task.uid}: {task_is_blocking}"
         )
 
-        destination_id, destination_type = self._repository.get_destination_info(self._task.uid)
-        task_destination = DestinationFactory.create_destination(destination_type, destination_id, self._config_file, self._opt_secret_retriever)
+        destination_type = self._repository.get_destination_info(self._task.destination_id)
+        task_destination = DestinationFactory.create_destination(destination_type, self._task.destination_id, self._config_file, self._opt_secret_retriever)
         logger.info(
             f"Destination retrieved for task_id={self._task.uid}: {task_destination}"
         )
@@ -66,7 +68,7 @@ class BaseProcessorManager (ABC):
             SparkMetricsAction(self._log_repository)
         ]
         
-        return task_source, task_is_blocking, task_destination, post_actions
+        return task_source, task_is_blocking, task_destination, post_actions, has_next_step
 
     @abstractmethod
     def start(self) -> OperationResult:
@@ -95,10 +97,11 @@ class SparkProcessorManager (BaseProcessorManager):
             )
             self._log_repository.insert_task_log_running(ctx)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+            task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             session = self._get_spark_session()
             df = task_source.to_dataframe(session, ctx)
-            task_destination.write(df)
+            df_dropped=df.drop(NAME_OF_PARTITIONING_COLUMN) #elimino eventuale partition column presente sul dataframe
+            task_destination.write(df_dropped)
             ctx.df = df
             for action in post_actions:
                 required=action.required_metrics()
@@ -107,6 +110,8 @@ class SparkProcessorManager (BaseProcessorManager):
                 else:
                     er: ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
+            #if has_next_step:
+                #write del semaforo
             self._log_repository.insert_task_log_successful(ctx)#, ctx.get("count_df"))
             logger.debug(f"task {self._task.uid} concluso con successo")
 
@@ -133,7 +138,7 @@ class NativeProcessorManager (BaseProcessorManager):
             logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
             self._log_repository.insert_task_log_running(ctx)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+            task_source, task_is_blocking, task_destination, post_actions, has_pipeline = self._get_common_data()
             res_read = task_source.fetch_all(ctx)
             task_destination.write_rows(res_read)
             self._log_repository.insert_task_log_successful(ctx, len(res_read))
@@ -161,7 +166,7 @@ class BigQueryProcessorManager (BaseProcessorManager):
             )
             self._log_repository.insert_task_log_running(ctx)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions = self._get_common_data()
+            task_source, task_is_blocking, task_destination, post_actions, has_pipeline = self._get_common_data()
             src = task_source.to_query(ctx)
             task_destination.write_query(src,ctx)
             #for action in post_actions: potrebbe però servire qui il salvataggio in registro

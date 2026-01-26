@@ -160,6 +160,7 @@ class TaskType:
 @dataclass(frozen=True)
 class TaskSemaforo:
     uid: str
+    logical_table: str
     source_id: str
     destination_id: str
     tipo_caricamento: str

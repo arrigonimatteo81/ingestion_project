@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from google.cloud.dataproc_v1 import WorkflowTemplate
 
 from common.configuration import DataprocConfiguration, Configuration, OrchestratorConfiguration
@@ -10,7 +12,13 @@ from metadata.models.tab_tasks import TaskSemaforo
 logger = get_logger(__name__)
 
 
-class OrchestratorManager:
+class OrchestratorManager(ABC):
+
+    @property
+    @abstractmethod
+    def table_semaforo(self) -> str:
+        """Nome tabella semaforo (obbligatorio per ogni orchestrator)"""
+        pass
 
     def __init__(self, run_id: str, config_file: str, groups: [str] = None,
                  repository: OrchestratorMetadata = None):
@@ -37,7 +45,7 @@ class OrchestratorManager:
     def _fetch_tasks_ids_in_groups(self, groups: [str]) -> [TaskSemaforo]:
         str_groups=",".join(groups)
         logger.debug(f"Retrieving tasks in groups {str_groups}")
-        tasks = self._repository.get_all_tasks_in_group(groups)
+        tasks = self._repository.get_all_tasks_in_group(groups, self.table_semaforo)
         return tasks
 
     def start(self) -> OperationResult:
@@ -69,8 +77,18 @@ class OrchestratorManager:
 
             return OperationResult(successful=True, description="Tutto ok")
 
+class IngestionOrchestratorManager(OrchestratorManager):
+
+    @property
+    def table_semaforo(self):
+        return "public.tab_semaforo_ready"
 
 
+class SilverOrchestratorManager(OrchestratorManager):
+
+    @property
+    def table_semaforo(self):
+        return "public.tab_semaforo_silver_ready"
 
 
 
