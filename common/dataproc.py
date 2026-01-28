@@ -41,14 +41,14 @@ class DataprocService:
 
 
     @staticmethod
-    def instantiate_task (task: TaskSemaforo, repository: OrchestratorMetadata, run_id: str, config_file: str, bucket_name: str) -> dict:
+    def instantiate_task (task: TaskSemaforo, repository: OrchestratorMetadata, run_id: str, config_file: str, bucket_name: str, layer: str) -> dict:
         logger.debug(f"Instantiating task: {task} ...")
         payload: TaskSemaforoPayload = TaskSemaforoPayload(task.uid, task.logical_table, task.source_id, task.destination_id, task.tipo_caricamento,
                             task.key, task.query_params)
 
-        task_file_path = DataprocService.upload_task_payload(payload, bucket_name, object_prefix="tasks_payloads")
+        task_file_path = DataprocService.upload_task_payload(payload, bucket_name, object_prefix=f"tasks_payloads/{layer}")
 
-        task_type = repository.get_task_configuration(task.key)
+        task_type = repository.get_task_configuration(task.key, layer)
 
         return {
                 "step_id": f"step-{task.uid}",
@@ -62,14 +62,16 @@ class DataprocService:
                         "--config_file",
                         config_file,
                         "--is_blocking",
-                        str(True)
+                        str(True),
+                        "--layer",
+                        layer
                     ],
                     "python_file_uris": task_type.additional_python_file_uris,
                     "jar_file_uris": task_type.jar_file_uris,
                     "file_uris": task_type.additional_file_uris,
                     "properties": task_type.dataproc_properties
                 },
-                "labels": DataprocService._build_labels(task, run_id)
+                "labels": DataprocService._build_labels(task, run_id, layer)
             }
 
     @staticmethod
@@ -86,13 +88,14 @@ class DataprocService:
         return workflow_id
 
     @staticmethod
-    def _build_labels(task, run_id) -> dict:
+    def _build_labels(task, run_id, layer) -> dict:
         raw_labels = {
             "run_id": run_id,
             "table": task.key.get("cod_tabella"),
             "abi": task.key.get("cod_abi"),
             "prov": task.key.get("cod_provenienza"),
-            "periodo": task.query_params.get("num_periodo_rif")
+            "periodo": task.query_params.get("num_periodo_rif"),
+            "layer": layer
         }
 
         return {
@@ -103,7 +106,7 @@ class DataprocService:
 
     @staticmethod
     def create_todo_list(config_file: str,orchestrator_repository: OrchestratorMetadata,run_id: str, tasks: [TaskSemaforo],
-                         max_tasks_per_workflow: int, bucket: str):
+                         max_tasks_per_workflow: int, bucket: str, layer: str):
 
         logger.debug("Creating todo list...")
 
@@ -114,7 +117,7 @@ class DataprocService:
         previous_heavy_step_id = None
 
         for task in heavy_tasks:
-            step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file, bucket)
+            step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file, bucket, layer)
 
             if previous_heavy_step_id:
                 step["prerequisite_step_ids"] = [previous_heavy_step_id]
@@ -136,7 +139,7 @@ class DataprocService:
             previous_step_id = None
 
             for task in slot:
-                step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file, bucket)
+                step = DataprocService.instantiate_task(task, orchestrator_repository, run_id,config_file, bucket, layer)
 
                 if previous_step_id:
                     step["prerequisite_step_ids"] = [previous_step_id]

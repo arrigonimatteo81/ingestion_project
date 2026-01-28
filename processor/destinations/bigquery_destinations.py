@@ -61,8 +61,11 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
 
         final_query = query.replace(TABLEPLACEHOLDER, f"{destination}")
 
+        logger.debug(f"final_query: {final_query}")
+
         job = self.client_bigquery.query(final_query)
         job.result()
+        return job.num_dml_affected_rows
 
     def write_rows(self, rows):
         table_id = self.resolve_destination()

@@ -12,4 +12,4 @@ CREATE TABLE public.tab_bigquery_sources (
 
 ALTER TABLE public.tab_bigquery_sources ADD CONSTRAINT fk_tab_bigquery_sources FOREIGN KEY (source_id) REFERENCES public.tab_task_sources(source_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
-GRANT SELECT ON table public.tab_bigquery_sources TO fdir_app;
+GRANT SELECT ON table public.tab_bigquery_sources TO nplg_app;

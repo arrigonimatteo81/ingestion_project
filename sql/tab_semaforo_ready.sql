@@ -1,22 +1,22 @@
-DROP TABLE if exists public.tab_semaforo_ready;
+--DROP TABLE if exists public.tab_semaforo_ready;
 
-CREATE TABLE public.tab_semaforo_ready (
-	uid uuid NULL,
-	logical_table varchar NOT NULL,
-	source_id varchar(128) NULL,
-	destination_id varchar(128) NULL,
-	tipo_caricamento varchar NULL,
-	"key" jsonb NULL,
-	query_param jsonb NULL,
-	is_heavy bool
-);
-GRANT SELECT,DELETE,UPDATE,TRUNCATE ON table public.tab_semaforo_ready TO nplg_app;
+--CREATE TABLE public.tab_semaforo_ready (
+--	uid uuid NULL,
+--	logical_table varchar NOT NULL,
+--	source_id varchar(128) NULL,
+--	destination_id varchar(128) NULL,
+--	tipo_caricamento varchar NULL,
+--	"key" jsonb NULL,
+--	query_param jsonb NULL,
+--	is_heavy bool
+--);
+--GRANT SELECT,DELETE,UPDATE,TRUNCATE ON table public.tab_semaforo_ready TO nplg_app;
 
-insert into public.tab_semaforo_ready
+create or replace view public.vw_semaforo_stage_ready
 select tb1.*, coalesce(is_heavy, false)as is_heavy  from
 (
 	(select
-	gen_random_uuid() as uid,s.tabella as logical_table, s.tabella as source_id,s.stage as destination_id,s.tipo_caricamento,s.key,
+	gen_random_uuid() as uid,s.tabella as logical_table, s.tabella as source_id,s.real_table as destination_id,s.tipo_caricamento,s.key,
 	case
 			when tipo_caricamento in ('TABUT','Tabut','Etraz','ESTRAZ', 'DOMINI', 'Domini') then
             	jsonb_build_object('id',id)
@@ -39,7 +39,7 @@ select tb1.*, coalesce(is_heavy, false)as is_heavy  from
 (select
 		id,
 		tabella,
-		ttc.stage,
+		ttc.real_table,
 		tipo_caricamento ,
 		colonna_valore,
 		ambito,cod_abi,provenienza,periodo_rif,
@@ -50,6 +50,7 @@ select tb1.*, coalesce(is_heavy, false)as is_heavy  from
 	from
 		public.tab_semaforo_mensile s left join public.tab_table_configs ttc
 		on s.tabella=ttc.logical_table
+		where ttc.layer='stage'
 		) s
 		left join public.tab_registro_mensile r
     on
@@ -57,33 +58,35 @@ select tb1.*, coalesce(is_heavy, false)as is_heavy  from
 where
 	r.last_id is null
 	or s.id > r.last_id
-) union all
+)
+union all
 (
 select
-	gen_random_uuid() as uid,s.tabella as source_id,s.stage as destination_id,s.tipo_caricamento,s.key,
+	gen_random_uuid() as uid,s.tabella as logical_table, s.tabella as source_id,s.real_table as destination_id,s.tipo_caricamento,s.key,
 	jsonb_build_object('id',id) 	as query_param from
 (select
 		id,
-		tabella,ttc.stage,
+		tabella,ttc.real_table,
 		tipo_caricamento ,
 		colonna_valore,
 		ambito,cod_abi,provenienza, periodo_rif,
 		jsonb_build_object('cod_tabella',tabella) as key
 	from
 		public.tab_semaforo_domini s left join public.tab_table_configs ttc
-		on s.tabella=ttc.logical_table) s
+		on s.tabella=ttc.logical_table where ttc.layer='stage') s
 		left join public.tab_registro_mensile r
     on
 	r.chiave = s.key
 where
 	r.last_id is null
 	or s.id > r.last_id
-) union all
-(select  gen_random_uuid() as uid,
-		tabella as source_id,ttc.stage as destination_id,
+)
+union all
+(select  gen_random_uuid() as uid,tabella as logical_table,
+		tabella as source_id,ttc.real_table as destination_id,
 		null as tipo_caricamento, null as key, null as query_param
 		from public.tab_no_semaforo s left join public.tab_table_configs ttc
-		on s.tabella=ttc.logical_table
+		on s.tabella=ttc.logical_table where ttc.layer='stage'
 )
 ) tb1 left join
 public.tab_task_configs

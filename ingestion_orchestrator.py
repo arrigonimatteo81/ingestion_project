@@ -4,6 +4,7 @@ import sys
 from common.result import OperationResult
 from common.utils import get_logger, download_from_gcs
 from orchestrator.manager import OrchestratorManager, IngestionOrchestratorManager
+from processor.domain import Layers
 
 logger = get_logger(__name__)
 
@@ -38,7 +39,7 @@ if __name__ == "__main__":
                 f"Skipping download json from gcs since {config_file} doesn't start with gcs"
             )
 
-        orchestrator: IngestionOrchestratorManager = IngestionOrchestratorManager(run_id=run_id, config_file=config_file, groups=groups)
+        orchestrator: IngestionOrchestratorManager = IngestionOrchestratorManager(run_id=run_id, config_file=config_file, groups=groups, layer=Layers.STAGE.value)
 
         orchestrator_result: OperationResult = orchestrator.start()
 

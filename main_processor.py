@@ -7,6 +7,7 @@ from common.task_semaforo_payload import TaskSemaforoPayload
 from common.utils import get_logger, extract_field_from_file, download_from_gcs
 from factories.processor_manager_factory import ProcessorManagerFactory
 from metadata.models.tab_tasks import TaskSemaforo
+from processor.domain import Layers
 
 logger = get_logger(__name__)
 
@@ -67,7 +68,7 @@ if __name__ == "__main__":
             elif opt in ("-b", "--is_blocking"):
                 is_blocking = arg.lower() == "true"
             elif opt in ("-l", "--layer"):
-                layer = arg.lower() == "stage"
+                layer = arg # == Layers.STAGE.value
     except getopt.GetoptError:
         show_usage()
         sys.exit(1)

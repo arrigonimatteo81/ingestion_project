@@ -14,7 +14,7 @@ from factories.registro_update_strategy_factory import RegistroUpdateStrategyFac
 from factories.source_factory import SourceFactory
 from helpers.query_resolver import TaskContext
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, TaskLogRepository, \
-    RegistroRepository
+    RegistroRepository, SemaforoMetadata
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.destinations.base import Destination
 from processor.domain import Metric
@@ -36,6 +36,7 @@ class BaseProcessorManager (ABC):
         self._repository = ProcessorMetadata(MetadataLoader(self._connection_string))
         self._log_repository = TaskLogRepository(MetadataLoader(self._connection_string))
         self._registro_repository = RegistroRepository(MetadataLoader(self._connection_string))
+        self._semaforo_repository = SemaforoMetadata(MetadataLoader(self._connection_string))
         self._layer=layer
 
     def _get_common_data(self):
@@ -43,7 +44,7 @@ class BaseProcessorManager (ABC):
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
         source_type = self._repository.get_source_info(self._task.source_id)
-        config_partitioning = self._repository.get_jdbc_source_partitioning_info(self._task.key)
+        config_partitioning = self._repository.get_jdbc_source_partitioning_info(self._task.key, self._layer)
         task_source = SourceFactory.create_source(source_type, self._task.source_id, self._config_file, config_partitioning, self._opt_secret_retriever)
         logger.info(
             f"Source retrieved for task_id={self._task.uid}: {task_source}"
@@ -65,7 +66,7 @@ class BaseProcessorManager (ABC):
 
         post_actions = [
             UpdateRegistroAction(strategy,self._registro_repository),
-            SparkMetricsAction(self._log_repository)
+            #SparkMetricsAction(self._log_repository)
         ]
         
         return task_source, task_is_blocking, task_destination, post_actions, has_next_step
@@ -95,7 +96,7 @@ class SparkProcessorManager (BaseProcessorManager):
                 query_params=self._task.query_params,
                 run_id=self._run_id
             )
-            self._log_repository.insert_task_log_running(ctx)
+            self._log_repository.insert_task_log_running(ctx, self._layer)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
             task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             session = self._get_spark_session()
@@ -110,18 +111,18 @@ class SparkProcessorManager (BaseProcessorManager):
                 else:
                     er: ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
-            #if has_next_step:
-                #write del semaforo
-            self._log_repository.insert_task_log_successful(ctx)#, ctx.get("count_df"))
+            if has_next_step:
+                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
+            self._log_repository.insert_task_log_successful(ctx, df.count(),self._layer)#, ctx.get("count_df"))
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
             if task_is_blocking:
-                self._log_repository.insert_task_log_failed(ctx ,exc.__str__())
+                self._log_repository.insert_task_log_failed(ctx ,exc.__str__(), self._layer)
             else:
-                self._log_repository.insert_task_log_warning(ctx, exc.__str__())
+                self._log_repository.insert_task_log_warning(ctx, exc.__str__(), self._layer)
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 
@@ -136,12 +137,12 @@ class NativeProcessorManager (BaseProcessorManager):
                 run_id=self._run_id
             )
             logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
-            self._log_repository.insert_task_log_running(ctx)
+            self._log_repository.insert_task_log_running(ctx, self._layer)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
             task_source, task_is_blocking, task_destination, post_actions, has_pipeline = self._get_common_data()
             res_read = task_source.fetch_all(ctx)
             task_destination.write_rows(res_read)
-            self._log_repository.insert_task_log_successful(ctx, len(res_read))
+            self._log_repository.insert_task_log_successful(ctx, len(res_read), self._layer)
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
@@ -164,28 +165,23 @@ class BigQueryProcessorManager (BaseProcessorManager):
                 query_params=self._task.query_params,
                 run_id=self._run_id
             )
-            self._log_repository.insert_task_log_running(ctx)
+            self._log_repository.insert_task_log_running(ctx, self._layer)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions, has_pipeline = self._get_common_data()
+            task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             src = task_source.to_query(ctx)
-            task_destination.write_query(src,ctx)
-            #for action in post_actions: potrebbe però servire qui il salvataggio in registro
-            #    required=action.required_metrics()
-            #    if required == Metric.MAX_DATA_VA:
-            #        er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
-            #    else:
-            #        er:ExecutionResult = ExecutionResult()
-            #    action.execute(er, ctx)
-            self._log_repository.insert_task_log_successful(ctx, len(src))
+            row_number=task_destination.write_query(src,ctx)
+            if has_next_step:
+                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
+            self._log_repository.insert_task_log_successful(ctx, row_number, self._layer)
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
 
         except Exception as exc:
             if task_is_blocking:
-                self._log_repository.insert_task_log_failed(ctx ,exc.__str__())
+                self._log_repository.insert_task_log_failed(ctx ,exc.__str__(), layer=self._layer)
             else:
-                self._log_repository.insert_task_log_warning(ctx, exc.__str__())
+                self._log_repository.insert_task_log_warning(ctx, exc.__str__(), layer=self._layer)
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 

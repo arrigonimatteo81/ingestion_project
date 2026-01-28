@@ -11,7 +11,7 @@ class TestQueryRenderer(unittest.TestCase):
 
     def test_return_correct_query_with_all_parameters(self):
         query_ctx = TaskContext(
-                    task=TaskSemaforo("uid1", "source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
+                    task=TaskSemaforo("uid1", "logical_table_1","source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
                                       {"p1_1": "param1_1", "p2_1": "param2_1"}),
                     key={"k1_1": "key1_1", "k2": "key2_1"},
                     query_params={"num_periodo_rif": 202510, "colonna_valore": "valore_p1", "cod_abi": 3239, "cod_provenienza": "PR"},
@@ -26,7 +26,7 @@ class TestQueryRenderer(unittest.TestCase):
 
     def test_return_correct_query_without_all_parameters(self):
         query_ctx = TaskContext(
-                    task=TaskSemaforo("uid1", "source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
+                    task=TaskSemaforo("uid1", "logical_table_1","source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
                                       {"p1_1": "param1_1", "p2_1": "param2_1"}),
                     key={"k1_1": "key1_1", "k2": "key2_1"},
                     query_params={"id": 8, "num_periodo_rif": 202510, "colonna_valore": "valore_p1", "cod_abi": 3239, "cod_provenienza": "PR"},
@@ -46,7 +46,7 @@ class TestQueryRenderer(unittest.TestCase):
 
     def test_return_correct_query_with_no_query_params(self):
         query_ctx = TaskContext(
-                    task=TaskSemaforo("uid1", "source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
+                    task=TaskSemaforo("uid1", "logical_table_1","source_id", "destination_id","gruppo_1",{"k1_1": "key1_1", "k2": "key2_1"},
                                       {"p1_1": "param1_1", "p2_1": "param2_1"}),
                     key={"k1_1": "key1_1", "k2": "key2_1"},
                     query_params={}, run_id="run_id"

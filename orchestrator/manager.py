@@ -6,7 +6,7 @@ from common.configuration import DataprocConfiguration, Configuration, Orchestra
 from common.dataproc import DataprocService
 from common.result import OperationResult
 from common.utils import get_logger, extract_field_from_file
-from metadata.loader.metadata_loader import OrchestratorMetadata, MetadataLoader
+from metadata.loader.metadata_loader import OrchestratorMetadata, MetadataLoader, SemaforoMetadata
 from metadata.models.tab_tasks import TaskSemaforo
 
 logger = get_logger(__name__)
@@ -20,7 +20,13 @@ class OrchestratorManager(ABC):
         """Nome tabella semaforo (obbligatorio per ogni orchestrator)"""
         pass
 
-    def __init__(self, run_id: str, config_file: str, groups: [str] = None,
+    @property
+    @abstractmethod
+    def max_contemporary_tasks(self) -> int:
+        """Nome tabella semaforo (obbligatorio per ogni orchestrator)"""
+        pass
+
+    def __init__(self, run_id: str, config_file: str, layer:str, groups: [str] = None,
                  repository: OrchestratorMetadata = None):
         logger.debug(
             f"Initializing Orchestrator with run_id '{run_id}', config_file '{config_file}', groups '{groups}', repository '{repository}'"
@@ -36,16 +42,18 @@ class OrchestratorManager(ABC):
         else:
             self._repository = repository
 
+        self._semaforo_repository = SemaforoMetadata(MetadataLoader(self._connection_string))
         conf = Configuration(self._repository.get_all_configurations())
         self._dataproc_cfg = DataprocConfiguration.from_configuration(conf)
         self._orchestrator_cfg = OrchestratorConfiguration.from_configuration(conf)
+        self._layer=layer
 
         logger.info("Orchestrator initialized")
 
     def _fetch_tasks_ids_in_groups(self, groups: [str]) -> [TaskSemaforo]:
         str_groups=",".join(groups)
         logger.debug(f"Retrieving tasks in groups {str_groups}")
-        tasks = self._repository.get_all_tasks_in_group(groups, self.table_semaforo)
+        tasks = self._semaforo_repository.get_all_tasks_in_group(groups, self.table_semaforo)
         return tasks
 
     def start(self) -> OperationResult:
@@ -60,9 +68,10 @@ class OrchestratorManager(ABC):
             return OperationResult(successful=False, description=err_mex)
         else:
             logger.debug(f"Task retrieved for groups {self._groups}: {tasks}")
+            logger.debug(f"max_contemporary_tasks: {self.max_contemporary_tasks}")
             todo_list = DataprocService.create_todo_list(self._config_file,self._repository,self._run_id,tasks,
-                                                         int(self._orchestrator_cfg.ingestion_max_contemporary_tasks),
-                                                         self._orchestrator_cfg.bucket)
+                                                         self.max_contemporary_tasks,
+                                                         self._orchestrator_cfg.bucket,self._layer)
 
             workflow_id = DataprocService.create_workflow_template_name(self._run_id, self._groups, 1)
 
@@ -81,14 +90,21 @@ class IngestionOrchestratorManager(OrchestratorManager):
 
     @property
     def table_semaforo(self):
-        return "public.tab_semaforo_ready"
+        return "public.vw_semaforo_stage_ready"
 
+    @property
+    def max_contemporary_tasks(self):
+        return self._orchestrator_cfg.ingestion_max_contemporary_tasks
 
 class SilverOrchestratorManager(OrchestratorManager):
 
     @property
     def table_semaforo(self):
-        return "public.tab_semaforo_silver_ready"
+        return "public.vw_semaforo_silver_ready"
+
+    @property
+    def max_contemporary_tasks(self):
+        return self._orchestrator_cfg.silver_max_contemporary_tasks
 
 
 

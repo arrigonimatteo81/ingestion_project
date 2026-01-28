@@ -145,7 +145,8 @@ class OrchestratorConfiguration:
     def __init__(
             self,
             bucket: str,
-            ingestion_max_contemporary_tasks: str
+            ingestion_max_contemporary_tasks: int = 10,
+            silver_max_contemporary_tasks: int = 10
     ):
         if bucket:
             self._bucket=bucket
@@ -158,18 +159,29 @@ class OrchestratorConfiguration:
                 "The 'ingestion_max_contemporary_tasks' parameter must be provided and cannot be empty."
             )
 
+        if silver_max_contemporary_tasks:
+            self._silver_max_contemporary_tasks = silver_max_contemporary_tasks
+        else:
+            raise ValueError(
+                "The 'silver_max_contemporary_tasks' parameter must be provided and cannot be empty."
+            )
+
 
     def __repr__(self):
-        return f"OrchestratorConfiguration(bucket={self.bucket},ingestion_max_contemporary_tasks={self.ingestion_max_contemporary_tasks})"
+        return (f"OrchestratorConfiguration(bucket={self.bucket},"
+                f"ingestion_max_contemporary_tasks={self.ingestion_max_contemporary_tasks},"
+                f"silver_max_contemporary_tasks={self.silver_max_contemporary_tasks})")
 
     @classmethod
     def from_configuration(cls, configuration: Configuration):
         bucket = configuration.get("bucket")
         ingestion_max_contemporary_tasks = configuration.get("ingestion_max_contemporary_tasks")
+        silver_max_contemporary_tasks = configuration.get("silver_max_contemporary_tasks")
 
         return cls(
             bucket=bucket,
-            ingestion_max_contemporary_tasks=ingestion_max_contemporary_tasks
+            ingestion_max_contemporary_tasks=int(ingestion_max_contemporary_tasks),
+            silver_max_contemporary_tasks=int(silver_max_contemporary_tasks)
         )
 
     @property
@@ -177,5 +189,9 @@ class OrchestratorConfiguration:
         return self._bucket
 
     @property
-    def ingestion_max_contemporary_tasks(self) -> str:
+    def ingestion_max_contemporary_tasks(self) -> int:
         return self._ingestion_max_contemporary_tasks
+
+    @property
+    def silver_max_contemporary_tasks(self) -> int:
+        return self._silver_max_contemporary_tasks

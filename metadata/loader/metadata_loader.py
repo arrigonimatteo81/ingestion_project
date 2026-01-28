@@ -59,6 +59,66 @@ class CommonMetadata:
             result.append(Config(*r[:-1]))
         return result
 
+class SemaforoMetadata:
+    def __init__(self, loader: MetadataLoader):
+        self._loader = loader
+
+    def get_all_tasks_in_group(self, groups: [str], table: str) -> [TaskSemaforo]:
+        sql = (f'SELECT uid, logical_table, source_id, destination_id, tipo_caricamento, "key", query_param, is_heavy '
+               f'FROM {table} where tipo_caricamento = ANY(%s)')
+        rows = self._loader.fetchall(sql, (groups,))
+        return [TaskSemaforo(*r) for r in rows]
+
+    def insert_task_semaforo(self, ctx: TaskContext, layer: str):
+        self.insert_task(
+            key_task=json.dumps(ctx.key),
+            run_id=ctx.run_id,
+            logical_table=ctx.task.logical_table,
+            query_param = json.dumps(ctx.query_params),
+            layer=layer,
+            uid=ctx.task.uid,
+            tipo_caricamento=ctx.task.tipo_caricamento
+        )
+
+
+    def insert_task(
+            self,
+            key_task,
+            run_id: str,
+            logical_table: str,
+            query_param,
+            layer: str,
+            uid: str,
+            tipo_caricamento: str
+    ):
+        sql = """
+        INSERT INTO public.tab_semaforo_steps (
+            run_id,logical_table,uid,tipo_caricamento,key,query_param,layer
+        )
+        VALUES (
+            %(run_id)s,
+            %(logical_table)s,
+            %(uid)s,
+            %(tipo_caricamento)s,
+            %(key)s,
+            %(query_param)s,
+            %(layer)s
+        )
+        """
+
+        params = {
+            "key": key_task,
+            "uid": uid,
+            "run_id": run_id,
+            "logical_table": logical_table,
+            "tipo_caricamento": tipo_caricamento,
+            "query_param": query_param,
+            "layer": layer
+        }
+
+        self._loader.execute(sql, params)
+
+
 
 class OrchestratorMetadata:
 
@@ -79,24 +139,21 @@ class OrchestratorMetadata:
         }
         return configs
 
-    def get_all_tasks_in_group(self, groups: [str], table: str) -> [TaskSemaforo]:
-        sql = (f'SELECT uid, logical_table, source_id, destination_id, tipo_caricamento, "key", query_param, is_heavy '
-               f'FROM {table} where tipo_caricamento = ANY(%s)')
-        rows = self._loader.fetchall(sql, (groups,))
-        return [TaskSemaforo(*r) for r in rows]
+
 
     def get_task(self, task_id) -> TaskSemaforo:
         sql=f"SELECT * FROM public.tab_tasks_semaforo where uid = %s"
         row = self._loader.fetchone(sql, (task_id,))
         return TaskSemaforo(*row)
 
-    def get_task_configuration(self, key: dict) -> TaskType:
+    def get_task_configuration(self, key: dict, layer: str) -> TaskType:
         sql = """SELECT key,description,main_python_file,additional_python_file_uris,jar_file_uris,additional_file_uris,
                 archive_file_uris,logging_config ,dataproc_properties
-                FROM public.tab_task_configs WHERE key <@ %s::jsonb ORDER by ( SELECT count(*) FROM jsonb_object_keys(key)) desc LIMIT 1;"""
+                FROM public.tab_task_configs WHERE layer=%s and  
+                key <@ %s::jsonb ORDER by ( SELECT count(*) FROM jsonb_object_keys(key)) desc LIMIT 1;"""
         row = self._loader.fetchone(
             sql,
-            (json.dumps(key),)
+            (layer,json.dumps(key),)
         )
         if row is None:
             return TaskType.default()
@@ -108,17 +165,17 @@ class ProcessorMetadata:
         self._loader = loader
 
     def get_task_is_blocking(self, logical_table_name: str, layer:str) -> bool:
-        sql = "SELECT coalesce(is_blocking,True) as is_blocking from public.tab_table_configs where logical_table = % s and layer = %s"
+        sql = "SELECT coalesce(is_blocking,True) as is_blocking from public.tab_table_configs where logical_table =%s and layer =%s"
         row = self._loader.fetchone(sql,(logical_table_name,layer))
         return bool(row[0])
 
     def get_task_processor_type(self, logical_table_name: str, layer:str) -> ProcessorType:
-        sql = 'select processor_type from public.tab_table_configs where logical_table= %s and layer=%s'
+        sql = 'select processor_type from public.tab_table_configs where logical_table=%s and layer=%s'
         row = self._loader.fetchone(sql, (logical_table_name,layer))
-        return row[0]
+        return ProcessorType(row[0].upper())
 
     def get_task_has_next(self, logical_table_name: str, layer:str) -> bool:
-        sql = 'select has_next from public.tab_table_configs where logical_table= %s and layer=%s'
+        sql = 'select has_next from public.tab_table_configs where logical_table=%s and layer=%s'
         row = self._loader.fetchone(sql, (logical_table_name,layer))
         return row[0]
 
@@ -127,10 +184,11 @@ class ProcessorMetadata:
         row = self._loader.fetchone(sql, (source_id,))
         return row[0]
 
-    def get_jdbc_source_partitioning_info(self, key: dict) -> TabConfigPartitioning:
+    def get_jdbc_source_partitioning_info(self, key: dict, layer: str) -> TabConfigPartitioning:
         sql = (
-            f'SELECT partitioning_expression,num_partitions FROM public.tab_config_partitioning where "key" = %s')
-        row = self._loader.fetchone(sql, (json.dumps(key),))
+            f'SELECT partitioning_expression,num_partitions FROM public.tab_config_partitioning where "key" = %s'
+            f' and layer = %s')
+        row = self._loader.fetchone(sql, (json.dumps(key),layer,))
         if row is None:
             return TabConfigPartitioning()
         return TabConfigPartitioning(*row)
@@ -211,43 +269,47 @@ class TaskLogRepository:
     def __init__(self, loader: MetadataLoader):
         self._loader = loader
 
-    def insert_task_log_running(self, ctx: TaskContext):
+    def insert_task_log_running(self, ctx: TaskContext, layer: str):
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.RUNNING,
-            task_log_description=f"task {ctx.run_id}-{ctx.key} avviato",
-            periodo=ctx.query_params.get("num_periodo_rif")
+            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} avviato",
+            periodo=ctx.query_params.get("num_periodo_rif"),
+            step = layer
         )
 
-    def insert_task_log_successful(self, ctx: TaskContext):
+    def insert_task_log_successful(self, ctx: TaskContext, rows: int, layer: str):
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.SUCCESSFUL,
-            task_log_description=f"task {ctx.run_id}-{ctx.key} concluso con successo",
-            rows_affected=ctx.df.count(),
-            periodo=ctx.query_params.get("num_periodo_rif")
+            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} avviato",
+            periodo=ctx.query_params.get("num_periodo_rif"),
+            step=layer,
+            rows_affected=rows
         )
 
-    def insert_task_log_failed(self, ctx: TaskContext, error_message: str):
+    def insert_task_log_failed(self, ctx: TaskContext, error_message: str, layer: str):
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.FAILED,
-            task_log_description=f"task {ctx.run_id}-{ctx.key} in ERRORE!",
+            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} in ERRORE!",
             error_message= error_message,
-            periodo=ctx.query_params.get("num_periodo_rif")
+            periodo=ctx.query_params.get("num_periodo_rif"),
+            step=layer
         )
 
-    def insert_task_log_warning(self, ctx: TaskContext, error_message: str):
+    def insert_task_log_warning(self, ctx: TaskContext, error_message: str, layer: str):
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.WARNING,
-            task_log_description=f"task {ctx.run_id}-{ctx.key} in ERRORE ma non bloccante",
+            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} in ERRORE ma non bloccante",
             error_message= error_message,
-            periodo=ctx.query_params.get("num_periodo_rif")
+            periodo=ctx.query_params.get("num_periodo_rif"),
+            step=layer
         )
 
     def insert_task_log(
@@ -259,7 +321,8 @@ class TaskLogRepository:
             error_message: str = "",
             update_ts: datetime = None,
             rows_affected: int = 0,
-            periodo: int = None
+            periodo: int = None,
+            step: str =''
     ):
         if update_ts is None:
             update_ts = datetime.now()
@@ -273,7 +336,8 @@ class TaskLogRepository:
             description,
             error_message,
             update_ts,
-            rows_affected
+            rows_affected,
+            step
         )
         VALUES (
             %(key)s,
@@ -283,7 +347,8 @@ class TaskLogRepository:
             %(description)s,
             %(error_message)s,
             %(update_ts)s,
-            %(rows_affected)s
+            %(rows_affected)s,
+            %(step)s
         )
         """
 
@@ -296,6 +361,7 @@ class TaskLogRepository:
             "error_message": error_message,
             "update_ts": update_ts,
             "rows_affected": rows_affected,
+            "step": step
         }
 
         self._loader.execute(sql, params)

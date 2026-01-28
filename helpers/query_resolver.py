@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from pyspark.sql import DataFrame
 
@@ -13,6 +13,7 @@ class TaskContext:
     query_params: dict
     run_id: str
     df: Optional[DataFrame] = None
+    #data: Optional[List] = None
     #registro_repo: RegistroMetadata
 
 class QueryResolver:

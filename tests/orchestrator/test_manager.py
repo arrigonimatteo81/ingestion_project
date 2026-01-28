@@ -13,7 +13,7 @@ class TestOrchestratorManager(unittest.TestCase):
     def setUp(self):
         self.mock_repo = MagicMock()
         self.mock_repo.get_all_tasks_in_group.return_value = [
-            TaskSemaforo("uid", "source_id", "destination_id", "tipo_caricamento", {"key":"val"}, {"key":"val"}, True),
+            TaskSemaforo("uid", "logical_table_1","source_id", "destination_id", "tipo_caricamento", {"key":"val"}, {"key":"val"}, True),
         ]
         self.mock_repo.get_all_configurations.return_value = {"region":"europe-west12","poll_sleep_time_seconds":60,"cluster_name":	"dprcpclt-isp-nplg0-svil-ew12-01",
                                                             "environment": "svil", "project": "prj-isp-nplg0-appl-svil-001",
