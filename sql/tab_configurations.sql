@@ -9,21 +9,12 @@ CREATE TABLE public.tab_configurations (
 
 GRANT SELECT ON table public.tab_configurations TO nplg_app;
 
-INSERT INTO public.tab_configurations
-(config_name, config_value, description)
-VALUES('project', 'prj-isp-nplg0-appl-test-001', 'Dataproc GCP project');
-INSERT INTO public.tab_configurations
-(config_name, config_value, description)
-VALUES('region', 'europe-west12', 'Dataproc region');
-INSERT INTO public.tab_configurations
-(config_name, config_value, description)
-VALUES('cluster_name', 'dprcpclt-isp-nplg0-test-ew12-01', 'Dataproc cluster name used for job placement');
-INSERT INTO public.tab_configurations
-(config_name, config_value, description)
-VALUES('environment', 'test', 'Environment (test, test or prod)');
-INSERT INTO public.tab_configurations
-(config_name, config_value, description)
-VALUES('poll_sleep_time_seconds', '60','Poll time to wait for the completion of a job (seconds)');
-INSERT INTO public.tab_configurations
-(config_name, config_value, description)
-VALUES('ingestion_max_contemporary_tasks','10','max contemporary tasks');
+INSERT INTO public.tab_configurations (config_name,config_value,description) VALUES
+	 ('region','europe-west12','Dataproc region'),
+	 ('poll_sleep_time_seconds','60','Poll time to wait for the completion of a job (seconds)'),
+	 ('cluster_name','dprcpclt-isp-nplg0-svil-ew12-01','Dataproc cluster name used for job placement'),
+	 ('environment','svil','Environment (svil, test or prod)'),
+	 ('project','prj-isp-nplg0-appl-svil-001','Dataproc GCP project'),
+	 ('ingestion_max_contemporary_tasks','8','max contemporary tasks in ingestion'),
+	 ('silver_max_contemporary_tasks','100','max contemporary tasks in silver'),
+	 ('bucket','bkt-isp-nplg0-dptmp-svil-001-ew12','GCP bucket temporaneo');

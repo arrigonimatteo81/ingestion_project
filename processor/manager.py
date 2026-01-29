@@ -128,6 +128,20 @@ class SparkProcessorManager (BaseProcessorManager):
 
 class NativeProcessorManager (BaseProcessorManager):
 
+    def _get_spark_session(self) -> SparkSession:
+        spark = (SparkSession.builder
+                 .config("spark.executor.instances", "1")
+                 .config("spark.executor.cores", "1")
+                 .config("spark.executor.memory", "512m")
+                 .config("spark.sql.shuffle.partitions", "1")
+                 .config("spark.default.parallelism", "1")
+                 .appName(f"Processor_{self._run_id}_{self._task.uid}")
+                 .getOrCreate())
+        logger.debug(
+            f"SparkSession properties: {spark.sparkContext.getConf().getAll()}"
+        )
+        return spark
+
     def start(self) -> OperationResult:
         try:
             ctx = TaskContext(
@@ -136,6 +150,8 @@ class NativeProcessorManager (BaseProcessorManager):
                 query_params=self._task.query_params,
                 run_id=self._run_id
             )
+            #spark session zombie minimale per evitare che vada in errore il processo
+            session = self._get_spark_session()
             logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
             self._log_repository.insert_task_log_running(ctx, self._layer)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
@@ -149,9 +165,9 @@ class NativeProcessorManager (BaseProcessorManager):
 
         except Exception as exc:
             if task_is_blocking:
-                self._log_repository.insert_task_log_failed(ctx ,exc.__str__())
+                self._log_repository.insert_task_log_failed(ctx ,exc.__str__(), self._layer)
             else:
-                self._log_repository.insert_task_log_warning(ctx, exc.__str__())
+                self._log_repository.insert_task_log_warning(ctx, exc.__str__(), self._layer)
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
 

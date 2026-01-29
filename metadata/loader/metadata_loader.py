@@ -270,43 +270,63 @@ class TaskLogRepository:
         self._loader = loader
 
     def insert_task_log_running(self, ctx: TaskContext, layer: str):
+        parts = filter(None, [
+            ctx.key.get('cod_abi'),
+            ctx.key.get('cod_tabella'),
+            ctx.key.get('cod_provenienza'),
+        ])
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.RUNNING,
-            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} avviato",
+            task_log_description = f"task {'-'.join(parts)} avviato",
             periodo=ctx.query_params.get("num_periodo_rif"),
             step = layer
         )
 
     def insert_task_log_successful(self, ctx: TaskContext, rows: int, layer: str):
+        parts = filter(None, [
+            ctx.key.get('cod_abi'),
+            ctx.key.get('cod_tabella'),
+            ctx.key.get('cod_provenienza'),
+        ])
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.SUCCESSFUL,
-            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} avviato",
+            task_log_description = f"task {'-'.join(parts)} concluso",
             periodo=ctx.query_params.get("num_periodo_rif"),
             step=layer,
             rows_affected=rows
         )
 
     def insert_task_log_failed(self, ctx: TaskContext, error_message: str, layer: str):
+        parts = filter(None, [
+            ctx.key.get('cod_abi'),
+            ctx.key.get('cod_tabella'),
+            ctx.key.get('cod_provenienza'),
+        ])
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.FAILED,
-            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} in ERRORE!",
+            task_log_description = f"task {'-'.join(parts)} in ERRORE!",
             error_message= error_message,
             periodo=ctx.query_params.get("num_periodo_rif"),
             step=layer
         )
 
     def insert_task_log_warning(self, ctx: TaskContext, error_message: str, layer: str):
+        parts = filter(None, [
+            ctx.key.get('cod_abi'),
+            ctx.key.get('cod_tabella'),
+            ctx.key.get('cod_provenienza'),
+        ])
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
             task_state=TaskState.WARNING,
-            task_log_description=f"task {ctx.run_id}-{ctx.key.get('cod_abi')}_{ctx.key.get('cod_tabella')}_{ctx.key.get('cod_provenienza')} in ERRORE ma non bloccante",
+            task_log_description = f"task {'-'.join(parts)} in ERRORE ma non bloccante",
             error_message= error_message,
             periodo=ctx.query_params.get("num_periodo_rif"),
             step=layer

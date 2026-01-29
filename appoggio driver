@@ -5,3 +5,6 @@
 | 5–20M          | 4              |
 | 20–50M         | 8              |
 | >50M           | 12 *(DEV max)* |
+
+
+jdbc:sqlserver://pdbclt076.syssede.systest.sanpaoloimi.com\\SYD202:1433;DatabaseName=RDBP0_MENS;encrypt=true;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NTLM;

@@ -10,10 +10,14 @@ class TableJDBCDestination(SparkWritable,NativeWritable, JDBC, DatabaseAware, De
     def write_rows(self, rows):
 
         placeholders = ", ".join(["%s"] * len(self.columns))
+
         cols = ", ".join(self.columns)
+
 
         sql = f"""INSERT INTO {self.db_table_destination} ({cols})
                   VALUES ({placeholders})"""
+
+
 
         with self.create_database() as db:
             db.connect()

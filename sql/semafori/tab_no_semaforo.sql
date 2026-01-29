@@ -8,3 +8,7 @@ CREATE TABLE public.tab_no_semaforo (
 
 
 GRANT TRUNCATE, INSERT, select ON public.tab_no_semaforo TO nplg_app;
+
+INSERT INTO public.tab_no_semaforo (tabella,tipo_caricamento) VALUES
+	 ('NPLG0_SEMAFORO_MENSILE','Semaforo'),
+	 ('NPLG0_SEMAFORO_DOMINI','Semaforo');

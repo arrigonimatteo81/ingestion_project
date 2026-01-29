@@ -47,7 +47,6 @@ class DataprocService:
                             task.key, task.query_params)
 
         task_file_path = DataprocService.upload_task_payload(payload, bucket_name, object_prefix=f"tasks_payloads/{layer}")
-
         task_type = repository.get_task_configuration(task.key, layer)
 
         return {

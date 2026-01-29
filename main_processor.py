@@ -63,6 +63,7 @@ if __name__ == "__main__":
             elif opt in ("-t", "--task"):
                 task_file=arg
                 task: TaskSemaforo = load_task_payload(task_file)
+
             elif opt in ("-c", "--config_file"):
                 config_file = arg
             elif opt in ("-b", "--is_blocking"):
@@ -90,7 +91,7 @@ if __name__ == "__main__":
             f"transformation task completed exited successfully: {processor_result.successful}"
         )
         if processor_result.successful:
-            delete_task_file(task_file)
+            #delete_task_file(task_file)
             sys.exit(0)
         else:
             # logger.error(processor_result.description)

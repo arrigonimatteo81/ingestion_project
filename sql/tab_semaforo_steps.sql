@@ -1,4 +1,4 @@
--- DROP TABLE public.tab_semaforo_steps;
+DROP TABLE if exists public.tab_semaforo_steps;
 
 CREATE TABLE public.tab_semaforo_steps (
 	uid uuid NULL,
@@ -9,3 +9,5 @@ CREATE TABLE public.tab_semaforo_steps (
 	query_param jsonb NOT NULL,
 	layer varchar NULL
 );
+
+GRANT TRUNCATE, INSERT, select ON public.tab_semaforo_steps TO nplg_app;

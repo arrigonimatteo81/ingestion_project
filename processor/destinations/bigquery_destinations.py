@@ -67,6 +67,7 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
         job.result()
         return job.num_dml_affected_rows
 
+    #Request is prohibited by organization's policy. Fare insert in questo modo in bigquery non è possibile per restrizioni di organizzazione
     def write_rows(self, rows):
         table_id = self.resolve_destination()
 
@@ -76,13 +77,10 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
         batch = []
         for row in rows:
             batch.append(dict(zip(self.columns, row)))
-            if len(batch) >= 500:
-                self.client_bigquery.insert_rows_json(table_id, batch)
-                batch.clear()
 
-        if batch:
-            self.client_bigquery.insert_rows_json(table_id, batch)
+        table = self.client_bigquery.get_table(table_id)
+        self.client_bigquery.insert_rows(table, batch)
 
     def resolve_destination(self) -> str:
-        return f"`{self.project}.{self.dataset}.{self.db_table_destination}`"
+        return f"{self.project}.{self.dataset}.{self.db_table_destination}"
 
