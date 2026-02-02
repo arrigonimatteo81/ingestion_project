@@ -32,7 +32,8 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
         repo.upsert(
             chiave=ctx.key,
             last_id=ctx.task.query_params.get("id"),
-            max_data_va=max_data
+            max_data_va=max_data,
+            periodo=ctx.task.query_params.get("num_periodo_rif")
         )
 
 

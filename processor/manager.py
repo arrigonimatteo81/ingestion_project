@@ -103,17 +103,17 @@ class SparkProcessorManager (BaseProcessorManager):
             df = task_source.to_dataframe(session, ctx)
             df_dropped=df.drop(NAME_OF_PARTITIONING_COLUMN) #elimino eventuale partition column presente sul dataframe
             task_destination.write(df_dropped)
-            ctx.df = df
+            ctx.df = df_dropped
             for action in post_actions:
                 required=action.required_metrics()
                 if required == Metric.MAX_DATA_VA:
-                    er: ExecutionResult = ExecutionResult(df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
+                    er: ExecutionResult = ExecutionResult(df_dropped.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
                 else:
                     er: ExecutionResult = ExecutionResult()
                 action.execute(er, ctx)
-            if has_next_step:
+            if has_next_step and not df_dropped.rdd.isEmpty():
                 self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
-            self._log_repository.insert_task_log_successful(ctx, df.count(),self._layer)#, ctx.get("count_df"))
+            self._log_repository.insert_task_log_successful(ctx, df_dropped.count(),self._layer)
             logger.debug(f"task {self._task.uid} concluso con successo")
 
             return OperationResult(successful=True, description="")
@@ -155,9 +155,11 @@ class NativeProcessorManager (BaseProcessorManager):
             logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
             self._log_repository.insert_task_log_running(ctx, self._layer)
             logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions, has_pipeline = self._get_common_data()
+            task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             res_read = task_source.fetch_all(ctx)
             task_destination.write_rows(res_read)
+            if has_next_step and len(res_read)>0:
+                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
             self._log_repository.insert_task_log_successful(ctx, len(res_read), self._layer)
             logger.debug(f"task {self._task.uid} concluso con successo")
 
@@ -182,11 +184,11 @@ class BigQueryProcessorManager (BaseProcessorManager):
                 run_id=self._run_id
             )
             self._log_repository.insert_task_log_running(ctx, self._layer)
-            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
+            logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando BigQueryProcessorManager")
             task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             src = task_source.to_query(ctx)
             row_number=task_destination.write_query(src,ctx)
-            if has_next_step:
+            if has_next_step and row_number>0:
                 self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
             self._log_repository.insert_task_log_successful(ctx, row_number, self._layer)
             logger.debug(f"task {self._task.uid} concluso con successo")
@@ -200,8 +202,3 @@ class BigQueryProcessorManager (BaseProcessorManager):
                 self._log_repository.insert_task_log_warning(ctx, exc.__str__(), layer=self._layer)
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
-
-
-
-
-

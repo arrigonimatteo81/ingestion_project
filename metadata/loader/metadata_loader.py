@@ -244,24 +244,27 @@ class RegistroRepository:
             *,
             chiave: dict,
             last_id: int,
-            max_data_va: int = None
+            max_data_va: int = None,
+            periodo: int = 0
     ):
         sql = """
-        INSERT INTO public.tab_registro_mensile (chiave, last_id, max_data_va, updated_at)
+        INSERT INTO public.tab_registro_mensile (chiave, last_id, max_data_va, updated_at, periodo)
         VALUES (%(chiave)s,
         %(last_id)s,
-        %(max_data_va)s, NOW())
+        %(max_data_va)s, NOW(), %(periodo)s)
         ON CONFLICT (chiave)
         DO UPDATE SET
             last_id = EXCLUDED.last_id,
             max_data_va = COALESCE(EXCLUDED.max_data_va, tab_registro_mensile.max_data_va),
-            updated_at = NOW()
+            updated_at = NOW(),
+            periodo = EXCLUDED.periodo
         WHERE tab_registro_mensile.last_id < EXCLUDED.last_id
         """
         self._loader.execute(sql, {
             "chiave": json.dumps(chiave),
             "last_id": last_id,
-            "max_data_va": max_data_va
+            "max_data_va": max_data_va,
+            "periodo": periodo
         })
 
 class TaskLogRepository:
@@ -271,7 +274,7 @@ class TaskLogRepository:
 
     def insert_task_log_running(self, ctx: TaskContext, layer: str):
         parts = filter(None, [
-            ctx.key.get('cod_abi'),
+            str(ctx.key.get('cod_abi')),
             ctx.key.get('cod_tabella'),
             ctx.key.get('cod_provenienza'),
         ])
@@ -286,7 +289,7 @@ class TaskLogRepository:
 
     def insert_task_log_successful(self, ctx: TaskContext, rows: int, layer: str):
         parts = filter(None, [
-            ctx.key.get('cod_abi'),
+            str(ctx.key.get('cod_abi')),
             ctx.key.get('cod_tabella'),
             ctx.key.get('cod_provenienza'),
         ])
@@ -302,7 +305,7 @@ class TaskLogRepository:
 
     def insert_task_log_failed(self, ctx: TaskContext, error_message: str, layer: str):
         parts = filter(None, [
-            ctx.key.get('cod_abi'),
+            str(ctx.key.get('cod_abi')),
             ctx.key.get('cod_tabella'),
             ctx.key.get('cod_provenienza'),
         ])
@@ -318,7 +321,7 @@ class TaskLogRepository:
 
     def insert_task_log_warning(self, ctx: TaskContext, error_message: str, layer: str):
         parts = filter(None, [
-            ctx.key.get('cod_abi'),
+            str(ctx.key.get('cod_abi')),
             ctx.key.get('cod_tabella'),
             ctx.key.get('cod_provenienza'),
         ])
