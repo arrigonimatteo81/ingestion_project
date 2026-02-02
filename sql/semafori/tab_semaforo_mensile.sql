@@ -5,7 +5,7 @@ CREATE TABLE public.tab_semaforo_mensile (
 	cod_abi int4 NULL,
 	periodo_rif int4 NULL,
 	tabella varchar(128) NOT NULL,
-	tipo_caricamento varchar(8) NOT NULL,
+	tipo_caricamento varchar NOT NULL,
 	provenienza bpchar(2) NOT NULL,
 	id_file varchar(32) NULL,
 	colonna_valore varchar(16) NULL,
