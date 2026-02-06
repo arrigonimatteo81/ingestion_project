@@ -3,6 +3,7 @@ import re
 import pandas as pd
 from google.cloud import storage
 from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import col
 
 from helpers.query_resolver import TaskContext
 from metadata.models.tab_file import GCS
@@ -34,8 +35,9 @@ class ExcelFileSource(FileSource):
         blob = bucket.blob(self.blob_name)
 
         df_read = self._readfile(blob)
-
-        return spark.createDataFrame(df_read)
+        df_ret: DataFrame = spark.createDataFrame(df_read)
+        df_ret = df_ret.withColumn("id_processo",col(ctx.task.uid))
+        return df_ret
 
     def _readfile(self, blob):
         data_bytes = blob.download_as_bytes()
@@ -53,12 +55,14 @@ class CsvFileSource(FileSource):
         return f"CsvGCSSource(format_file: {self.format_file}, gcs_path: {self.gcs_path}, separator: {self.separator})"
 
     def to_dataframe(self, spark: SparkSession, ctx: TaskContext = None) -> DataFrame:
-        return (spark.read.format("csv")
+        df_read:DataFrame = (spark.read.format("csv")
                 .option("path",self.gcs_path)
                 .option("sep",self.separator)
                 .option("inferSchema",True)
                 .option("header",True)
                 .load())
+
+        return df_read.withColumn("id_processo", col(ctx.task.uid))
 
 class ParquetFileSource(FileSource):
     def __init__(self, gcs_path: str):
@@ -70,4 +74,5 @@ class ParquetFileSource(FileSource):
                 #f"bucket_name: {self.bucket_name})")
 
     def to_dataframe(self, spark: SparkSession, ctx: TaskContext = None) -> DataFrame:
-        return spark.read.format("parquet").option("path",self.gcs_path).load()
+        df_read:DataFrame =  spark.read.format("parquet").option("path",self.gcs_path).load()
+        return df_read.withColumn("id_processo", col(ctx.task.uid))

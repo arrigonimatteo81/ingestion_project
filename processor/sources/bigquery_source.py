@@ -25,7 +25,7 @@ class QueryBigQuerySource(BigQueryQuery, SparkReadable, BigQueryReadable):
 
 class TableBigQuerySource(BigQueryTable, SparkReadable, BigQueryReadable):
     def to_query(self, ctx) -> str:
-        return QueryResolver.resolve(f"select * from {self.project}.{self.dataset}.{self.table}", ctx)
+        return QueryResolver.resolve("select *, '${uid}' as id_process from " + f"{self.project}.{self.dataset}.{self.table}", ctx)
 
     def to_dataframe(self, spark, ctx):
         spark.conf.set("parentProject", self.project)

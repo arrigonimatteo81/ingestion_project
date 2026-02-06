@@ -1,24 +1,20 @@
-import shlex
+import time
 
-from google.api_core.retry import Retry
 from google.api_core import retry as retries
+from google.api_core.operation import Operation
+from google.api_core.retry import Retry
 from google.cloud import storage
 from google.cloud.dataproc_v1 import WorkflowTemplate, WorkflowTemplateServiceClient, WorkflowMetadata, WorkflowGraph, \
-    WorkflowNode, WorkflowTemplatePlacement, ManagedCluster, ClusterSelector
-from google.api_core.operation import Operation
+    WorkflowNode, WorkflowTemplatePlacement, ClusterSelector
+
 from common.configuration import DataprocConfiguration
 from common.result import OperationResult
 from common.task_semaforo_payload import TaskSemaforoPayload
 from common.utils import get_logger
 from metadata.loader.metadata_loader import OrchestratorMetadata
 from metadata.models.tab_tasks import TaskSemaforo
-import time
 
 logger = get_logger(__name__)
-
-
-
-
 
 class DataprocService:
 
@@ -90,6 +86,7 @@ class DataprocService:
     def _build_labels(task, run_id, layer) -> dict:
         raw_labels = {
             "run_id": run_id,
+            "process_id": task.uid,
             "table": task.key.get("cod_tabella"),
             "abi": task.key.get("cod_abi"),
             "prov": task.key.get("cod_provenienza"),

@@ -1,5 +1,5 @@
 from processor.update_strategy.registro_update_strategy import RegistroUpdateStrategy, IdAndDateUpdateStrategy, \
-    OnlyIdUpdateStrategy, NoOpRegistroUpdateStrategy
+    OnlyIdUpdateStrategy, NoOpRegistroUpdateStrategy, FileUpdateStrategy
 
 
 class RegistroUpdateStrategyFactory:
@@ -10,4 +10,6 @@ class RegistroUpdateStrategyFactory:
             return IdAndDateUpdateStrategy()
         if tipo_caricamento.upper()in ("DATI", "DOMINI", "TABUT", "ESTRAZ"):
             return OnlyIdUpdateStrategy()
+        if tipo_caricamento.upper()in ("DATI_RETT","CLIENTI_RETT", "RAPPORTI_RETT"):
+            return FileUpdateStrategy()
         return NoOpRegistroUpdateStrategy()

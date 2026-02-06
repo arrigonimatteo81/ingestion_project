@@ -45,6 +45,17 @@ class OnlyIdUpdateStrategy(RegistroUpdateStrategy):
             last_id=ctx.task.query_params.get("id")
         )
 
+
+class FileUpdateStrategy(RegistroUpdateStrategy):
+
+    def update(self, er: ExecutionResult, ctx: TaskContext, repo: RegistroRepository):
+        repo.insert_rett(
+            chiave=ctx.key,
+            files=ctx.task.query_params.get("id_files"),
+            run_id=ctx.run_id,
+            process_id=ctx.task.uid
+        )
+
 class NoOpRegistroUpdateStrategy(RegistroUpdateStrategy):
 
     def update(self, er, ctx, repo):

@@ -158,6 +158,14 @@ class NativeProcessorManager (BaseProcessorManager):
             task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             res_read = task_source.fetch_all(ctx)
             task_destination.write_rows(res_read)
+            for action in post_actions: #questioni di update dell'id sul registro e/o del registro rettifiche
+                required=action.required_metrics()
+                if required == Metric.MAX_DATA_VA:
+                    #recupero il max di num_data_va da res_read
+                    er: ExecutionResult = ExecutionResult(max(row['num_data_va'] for row in res_read))
+                else:
+                    er: ExecutionResult = ExecutionResult()
+                action.execute(er, ctx)
             if has_next_step and len(res_read)>0:
                 self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
             self._log_repository.insert_task_log_successful(ctx, len(res_read), self._layer)
@@ -187,7 +195,7 @@ class BigQueryProcessorManager (BaseProcessorManager):
             logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando BigQueryProcessorManager")
             task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
             src = task_source.to_query(ctx)
-            row_number=task_destination.write_query(src,ctx)
+            row_number = task_destination.write_query(src,ctx)
             if has_next_step and row_number>0:
                 self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
             self._log_repository.insert_task_log_successful(ctx, row_number, self._layer)

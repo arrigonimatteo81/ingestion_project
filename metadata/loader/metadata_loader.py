@@ -41,6 +41,15 @@ class MetadataLoader:
                 self.conn.rollback()
                 raise
 
+    def execute_many(self, sql: str, params=None):
+        with self.conn.cursor() as cur:
+            try:
+                cur.executemany(sql, params)
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
+
 class CommonMetadata:
 
     def __init__(self, loader: MetadataLoader):
@@ -71,7 +80,7 @@ class SemaforoMetadata:
 
     def insert_task_semaforo(self, ctx: TaskContext, layer: str):
         self.insert_task(
-            key_task=json.dumps(ctx.key),
+            key_task=json.dumps(ctx.key, sort_keys=True),
             run_id=ctx.run_id,
             logical_table=ctx.task.logical_table,
             query_param = json.dumps(ctx.query_params),
@@ -261,11 +270,25 @@ class RegistroRepository:
         WHERE tab_registro_mensile.last_id < EXCLUDED.last_id
         """
         self._loader.execute(sql, {
-            "chiave": json.dumps(chiave),
+            "chiave": json.dumps(chiave, sort_keys=True),
             "last_id": last_id,
             "max_data_va": max_data_va,
             "periodo": periodo
         })
+
+    def insert_rett(self,*, chiave,files, run_id, process_id):
+
+        rows = [
+            (json.dumps(chiave, sort_keys=True), file, run_id, process_id)
+            for file in files
+        ]
+
+        sql = """INSERT INTO public.tab_registro_rettifiche (chiave, id_file, run_id, process_id, insert_date)
+                VALUES (%(chiave)s,%(file)s, %(run_id)s, %(process_id)s, NOW())
+                ON CONFLICT (chiave, id_file) DO NOTHING"""
+
+        self._loader.execute_many(sql, rows)
+
 
 class TaskLogRepository:
 
@@ -281,6 +304,7 @@ class TaskLogRepository:
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
+            process_id=ctx.task.uid,
             task_state=TaskState.RUNNING,
             task_log_description = f"task {'-'.join(parts)} avviato",
             periodo=ctx.query_params.get("num_periodo_rif"),
@@ -296,6 +320,7 @@ class TaskLogRepository:
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
+            process_id=ctx.task.uid,
             task_state=TaskState.SUCCESSFUL,
             task_log_description = f"task {'-'.join(parts)} concluso",
             periodo=ctx.query_params.get("num_periodo_rif"),
@@ -312,6 +337,7 @@ class TaskLogRepository:
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
+            process_id=ctx.task.uid,
             task_state=TaskState.FAILED,
             task_log_description = f"task {'-'.join(parts)} in ERRORE!",
             error_message= error_message,
@@ -328,6 +354,7 @@ class TaskLogRepository:
         self.insert_task_log(
             key_task=json.dumps(ctx.key),
             run_id=ctx.run_id,
+            process_id=ctx.task.uid,
             task_state=TaskState.WARNING,
             task_log_description = f"task {'-'.join(parts)} in ERRORE ma non bloccante",
             error_message= error_message,
@@ -339,6 +366,7 @@ class TaskLogRepository:
             self,
             key_task,
             run_id: str,
+            process_id: str,
             task_state: TaskState,
             task_log_description: str = "",
             error_message: str = "",
@@ -355,6 +383,7 @@ class TaskLogRepository:
             key,
             periodo,
             run_id,
+            process_id,
             state_id,
             description,
             error_message,
@@ -366,6 +395,7 @@ class TaskLogRepository:
             %(key)s,
             %(periodo)s,
             %(run_id)s,
+            %(process_id)s,
             %(state_id)s,
             %(description)s,
             %(error_message)s,
@@ -379,6 +409,7 @@ class TaskLogRepository:
             "key": key_task,
             "periodo": periodo,
             "run_id": run_id,
+            "process_id": process_id,
             "state_id": task_state.value,
             "description": task_log_description,
             "error_message": error_message,

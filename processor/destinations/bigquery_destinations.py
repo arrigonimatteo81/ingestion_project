@@ -51,7 +51,7 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
     def write_query(self,query, ctx):
 
         destination = self.resolve_destination()
-        
+
         if self.overwrite:
             truncate_sql = f"TRUNCATE TABLE {destination}"
             self.client_bigquery.query(truncate_sql).result()
@@ -67,7 +67,6 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
         job.result()
         return job.num_dml_affected_rows
 
-    #Request is prohibited by organization's policy. Fare insert in questo modo in bigquery non è possibile per restrizioni di organizzazione
     def write_rows(self, rows):
         table_id = self.resolve_destination()
 

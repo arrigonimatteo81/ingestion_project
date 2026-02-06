@@ -1,4 +1,5 @@
 import psycopg2
+import psycopg2.extras
 from db.database import DbConcrete
 
 
@@ -17,5 +18,5 @@ class PostgresDB(DbConcrete):
             user=self.cfg["user"],
             password=self.cfg["password"]
     )
-        self.cursor = self.conn.cursor()
+        self.cursor = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         return self

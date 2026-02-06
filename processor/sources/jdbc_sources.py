@@ -13,7 +13,12 @@ logger = get_logger(__name__)
 
 class TableJDBCSource(JDBCTable, DatabaseAware, SparkReadable, NativeReadable):
     def fetch_all(self, ctx):
-        pass
+        query_text = QueryResolver.resolve("select *, '${uid} as id_process' from " + f"{self.dbtable}", ctx)
+        db = self.create_database()
+        db.connect()
+        res = db.fetch_all(query_text)
+        db.close()
+        return res
 
     def __init__(
             self,

@@ -1,5 +1,6 @@
 import pymssql
-from db.database import Database, DbConcrete
+
+from db.database import DbConcrete
 
 
 class SqlServerDB(DbConcrete):
@@ -15,13 +16,8 @@ class SqlServerDB(DbConcrete):
                     password=self.cfg["password"],
                     database=match.group("db")
             )
-        self.cursor = self.conn.cursor()
+        self.cursor = self.conn.cursor(as_dict=True) #as_dict=True valido solo per pymssql: torna i nomi delle colonne della query eseguita
         return self
 
     def _switch_user_components(self):
         return f"{self.cfg['user'].split('@')[1]}\\{self.cfg['user'].split('@')[0]}"
-
-#with pymssql.connect(server=r"pdbclt076.syssede.systest.sanpaoloimi.com",user=r"SYSSPIMI\SYS_LG_RDB",password="4EfTw@B9UpCriK#epGiM",database="RDBP0_MENS") as db_source:
-#...     with db_source.cursor() as cursor:
-#...             cursor.execute("Select 1")
-#...             cursor.fetchall()

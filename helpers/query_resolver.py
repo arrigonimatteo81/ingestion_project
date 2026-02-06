@@ -25,7 +25,7 @@ class QueryResolver:
             values.update(ctx.key)
             values.update(ctx.query_params)
             values["id_semaforo"] = ctx.task.query_params.get("id")
-
+            values["uid"] = ctx.task.uid
             query = template
             for k, v in values.items():
                 query = query.replace(f"${{{k}}}", str(v))
