@@ -5,6 +5,13 @@ class ProcessorType(Enum):
     BIGQUERY = "BIGQUERY"
     SPARK = "SPARK"
     NATIVE = "NATIVE"
+    CUSTOM = "CUSTOM"
+
+class DbType(Enum):
+    POSTGRESQL = "POSTGRESQL"
+    MYSQL = "MYSQL"
+    ORACLE = "ORACLE"
+    SQLSERVER = "SQLSERVER"
 
 class SourceType(Enum):
     JDBC = "JDBC"

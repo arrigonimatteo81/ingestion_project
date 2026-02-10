@@ -8,6 +8,7 @@ from pyspark.sql import functions as F
 from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.result import OperationResult
 from common.secrets import SecretRetriever
+from common.task_runtime import TaskRuntime
 from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
 from factories.registro_update_strategy_factory import RegistroUpdateStrategyFactory
@@ -39,7 +40,7 @@ class BaseProcessorManager (ABC):
         self._semaforo_repository = SemaforoMetadata(MetadataLoader(self._connection_string))
         self._layer=layer
 
-    def _get_common_data(self):
+    def _build_runtime(self):
         """Retrieve common data needed by all processor types"""
         logger.debug(f"Retrieving transformations for task_id={self._task.uid}")
 
@@ -68,11 +69,63 @@ class BaseProcessorManager (ABC):
             UpdateRegistroAction(strategy,self._registro_repository),
             #SparkMetricsAction(self._log_repository)
         ]
-        
-        return task_source, task_is_blocking, task_destination, post_actions, has_next_step
+
+        return TaskRuntime(
+            source=task_source,
+            destination=task_destination,
+            is_blocking=task_is_blocking,
+            has_next_step=has_next_step,
+            post_actions=post_actions
+        )
+
+
+    def start(self) -> OperationResult:
+        ctx = TaskContext(
+            self._task,
+            key=self._task.key,
+            query_params=self._task.query_params,
+            run_id=self._run_id
+        )
+
+        try:
+            self._log_repository.insert_task_log_running(ctx, self._layer)
+
+            tr: TaskRuntime = self._build_runtime()
+
+            execution_result: ExecutionResult = self._execute_task(
+                ctx,
+                tr.source,
+                tr.destination
+            )
+
+            # post actions comuni
+            for action in tr.post_actions:
+                action.execute(execution_result, ctx)
+
+            # semaforo
+            if tr.has_next_step and execution_result.get("row_count", 0) > 0:
+                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
+
+            # log finale
+            self._log_repository.insert_task_log_successful(
+                ctx,
+                execution_result.get("row_count", 0),
+                self._layer
+            )
+
+            return OperationResult(True, "")
+
+        except Exception as exc:
+            if tr.task_is_blocking:
+                self._log_repository.insert_task_log_failed(ctx, str(exc), self._layer)
+            else:
+                self._log_repository.insert_task_log_warning(ctx, str(exc), self._layer)
+
+            logger.error(exc, exc_info=True)
+            return OperationResult(False, str(exc))
 
     @abstractmethod
-    def start(self) -> OperationResult:
+    def _execute_task(self, ctx, source, destination) -> ExecutionResult:
         pass
 
 
@@ -88,43 +141,21 @@ class SparkProcessorManager (BaseProcessorManager):
         )
         return spark
 
-    def start(self) -> OperationResult:
-        try:
-            ctx = TaskContext(
-                self._task,
-                key=self._task.key,
-                query_params=self._task.query_params,
-                run_id=self._run_id
-            )
-            self._log_repository.insert_task_log_running(ctx, self._layer)
-            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
-            session = self._get_spark_session()
-            df = task_source.to_dataframe(session, ctx)
-            df_dropped=df.drop(NAME_OF_PARTITIONING_COLUMN) #elimino eventuale partition column presente sul dataframe
-            task_destination.write(df_dropped)
-            ctx.df = df_dropped
-            for action in post_actions:
-                required=action.required_metrics()
-                if required == Metric.MAX_DATA_VA:
-                    er: ExecutionResult = ExecutionResult(df_dropped.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"])
-                else:
-                    er: ExecutionResult = ExecutionResult()
-                action.execute(er, ctx)
-            if has_next_step and not df_dropped.rdd.isEmpty():
-                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
-            self._log_repository.insert_task_log_successful(ctx, df_dropped.count(),self._layer)
-            logger.debug(f"task {self._task.uid} concluso con successo")
+    def _execute_task(self, ctx, source, destination):
 
-            return OperationResult(successful=True, description="")
+        session = self._get_spark_session()
+        df = source.to_dataframe(session, ctx)
+        df = df.drop(NAME_OF_PARTITIONING_COLUMN)
+        destination.write(df)
+        max_data = df.agg(
+            F.max("num_data_va").alias("max_data")
+        ).collect()[0]["max_data"]
 
-        except Exception as exc:
-            if task_is_blocking:
-                self._log_repository.insert_task_log_failed(ctx ,exc.__str__(), self._layer)
-            else:
-                self._log_repository.insert_task_log_warning(ctx, exc.__str__(), self._layer)
-            logger.error(exc, exc_info=True)
-            return OperationResult(False, str(exc))
+        rowcount = df.count()
+        return ExecutionResult({
+            "max_data_va": max_data,
+            "row_count": rowcount
+        })
 
 class NativeProcessorManager (BaseProcessorManager):
 
@@ -142,71 +173,21 @@ class NativeProcessorManager (BaseProcessorManager):
         )
         return spark
 
-    def start(self) -> OperationResult:
-        try:
-            ctx = TaskContext(
-                self._task,
-                key=self._task.key,
-                query_params=self._task.query_params,
-                run_id=self._run_id
-            )
-            #spark session zombie minimale per evitare che vada in errore il processo
-            session = self._get_spark_session()
-            logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando NativeProcessorManager")
-            self._log_repository.insert_task_log_running(ctx, self._layer)
-            logger.debug(f"inizio {self._task.uid}, {self._run_id}")
-            task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
-            res_read = task_source.fetch_all(ctx)
-            task_destination.write_rows(res_read)
-            for action in post_actions: #questioni di update dell'id sul registro e/o del registro rettifiche
-                required=action.required_metrics()
-                if required == Metric.MAX_DATA_VA:
-                    #recupero il max di num_data_va da res_read
-                    er: ExecutionResult = ExecutionResult(max(row['num_data_va'] for row in res_read))
-                else:
-                    er: ExecutionResult = ExecutionResult()
-                action.execute(er, ctx)
-            if has_next_step and len(res_read)>0:
-                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
-            self._log_repository.insert_task_log_successful(ctx, len(res_read), self._layer)
-            logger.debug(f"task {self._task.uid} concluso con successo")
-
-            return OperationResult(successful=True, description="")
-
-        except Exception as exc:
-            if task_is_blocking:
-                self._log_repository.insert_task_log_failed(ctx ,exc.__str__(), self._layer)
-            else:
-                self._log_repository.insert_task_log_warning(ctx, exc.__str__(), self._layer)
-            logger.error(exc, exc_info=True)
-            return OperationResult(False, str(exc))
+    def _execute_task(self, ctx, source, destination):
+        s = self._get_spark_session
+        res_read = source.fetch_all(ctx)
+        destination.write_rows(res_read)
+        max_data = max(row['num_data_va'] for row in res_read) if res_read else None
+        rowcount = len(res_read)
+        return ExecutionResult({
+            "max_data_va": max_data,
+            "row_count": rowcount
+        })
 
 class BigQueryProcessorManager (BaseProcessorManager):
-
-    def start(self) -> OperationResult:
-        try:
-            ctx = TaskContext(
-                self._task,
-                key=self._task.key,
-                query_params=self._task.query_params,
-                run_id=self._run_id
-            )
-            self._log_repository.insert_task_log_running(ctx, self._layer)
-            logger.debug(f"inizio {self._task.uid}, {self._run_id} instanziando BigQueryProcessorManager")
-            task_source, task_is_blocking, task_destination, post_actions, has_next_step = self._get_common_data()
-            src = task_source.to_query(ctx)
-            row_number = task_destination.write_query(src,ctx)
-            if has_next_step and row_number>0:
-                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
-            self._log_repository.insert_task_log_successful(ctx, row_number, self._layer)
-            logger.debug(f"task {self._task.uid} concluso con successo")
-
-            return OperationResult(successful=True, description="")
-
-        except Exception as exc:
-            if task_is_blocking:
-                self._log_repository.insert_task_log_failed(ctx ,exc.__str__(), layer=self._layer)
-            else:
-                self._log_repository.insert_task_log_warning(ctx, exc.__str__(), layer=self._layer)
-            logger.error(exc, exc_info=True)
-            return OperationResult(False, str(exc))
+    def _execute_task(self, ctx, source, destination):
+        query = source.to_query(ctx)
+        row_number = destination.write_query(query, ctx)
+        return ExecutionResult({
+            "row_count": row_number
+        })

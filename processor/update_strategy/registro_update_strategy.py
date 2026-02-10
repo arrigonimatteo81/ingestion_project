@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from common.result import ExecutionResult
 from helpers.query_resolver import TaskContext
 from metadata.loader.metadata_loader import RegistroRepository
 from processor.domain import Metric
 
-
-@dataclass
-class ExecutionResult:
-    max_date: int = None
 
 class RegistroUpdateStrategy(ABC):
 
@@ -27,7 +24,7 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
     def update(self, er: ExecutionResult, ctx: TaskContext, repo: RegistroRepository):
 
-        max_data = er.max_date
+        max_data = er.get("max_data_va")
 
         repo.upsert(
             chiave=ctx.key,

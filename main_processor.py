@@ -91,7 +91,7 @@ if __name__ == "__main__":
             f"transformation task completed exited successfully: {processor_result.successful}"
         )
         if processor_result.successful:
-            #delete_task_file(task_file)
+            delete_task_file(task_file)
             sys.exit(0)
         else:
             # logger.error(processor_result.description)

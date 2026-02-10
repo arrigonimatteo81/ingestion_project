@@ -17,6 +17,7 @@ AS SELECT tab1.uid,
             ttc_1.real_table AS source_id,
             tss.tipo_caricamento
            FROM public.tab_semaforo_steps tss
-             JOIN public.tab_table_configs ttc_1 ON tss.logical_table::text = ttc_1.logical_table::text AND ttc_1.layer::text = tss.layer::text) tab1
+             JOIN public.tab_table_configs ttc_1 ON tss.logical_table::text = ttc_1.logical_table::text
+             AND ttc_1.layer::text = tss.layer::text where tss.layer='stage') tab1
      JOIN public.tab_table_configs ttc ON tab1.logical_table::text = ttc.logical_table::text
   WHERE ttc.layer::text = 'silver'::text;

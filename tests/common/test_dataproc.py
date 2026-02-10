@@ -6,6 +6,7 @@ from common.dataproc import DataprocService
 from common.environment import Environment
 from metadata.loader.metadata_loader import OrchestratorMetadata
 from metadata.models.tab_tasks import TaskType, TaskSemaforo
+from processor.domain import Layers
 
 TEST_RUN_ID = "20250115_1013"
 TEST_APPLICATION_CONF = "application.conf"
@@ -38,7 +39,7 @@ class MockOrchestratorRepository(OrchestratorMetadata):
         return TaskSemaforo("uid","source_id", "destination_id", "gruppo", {"cod_provenienza":"PR", "cod_abi": "3239", "cod_tabella":"tabella"},
                             {"cod_colonna_valore" :"colonna_valore", "max_data_va": "20251230090600"})
 """
-    def get_task_configuration(self, config_task):
+    def get_task_configuration(self, config_task, layer):
         return TaskType("source_id-03239-PR", "descrizione profilo di test", "main_file_python.py",
                         ["additional_file_1.py", "additional_file_2.py"], ["jar_file_uri"], ["additional_jar_file_uri"])
 
@@ -57,7 +58,8 @@ class ToTestDataprocService(unittest.TestCase):
                 repository=self.orchestrator_repo,
                 run_id=TEST_RUN_ID,
                 config_file=TEST_APPLICATION_CONF,
-                bucket_name="ignored"
+                bucket_name="ignored",
+                layer=Layers.STAGE.value
             )
         """self.assertIn("jobs", template_request)  # asserts jobs are present
         self.assertEqual(
@@ -90,7 +92,7 @@ class ToTestDataprocService(unittest.TestCase):
                 repository=self.orchestrator_repo,
                 run_id=TEST_RUN_ID,
                 config_file=TEST_APPLICATION_CONF,
-                bucket_name="gs://fake-bucket"
+                bucket_name="gs://fake-bucket",layer=Layers.STAGE.value
             )
         self.assertEqual(task1_job.get("pyspark_job").get("args")[3],fake_path)
 
@@ -101,7 +103,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                          [TaskSemaforo("uid1","logical_table_1","source_1", "destination_1", "gruppo_1",
                                                                        {"k1_1": "key1_1", "k2": "key2_1"},
                                                                        {"p1_1": "param1_1", "p2_1": "param2_1"})],
-                                                         5, bucket="gs://fake-bucket")
+                                                         5, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
         self.assertEqual(1, len(todo_list))
 
     def test_number_of_tasks_create_to_do_list_of_one_workflow_of_two_tasks(self):
@@ -114,7 +116,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                       TaskSemaforo("uid2","logical_table_2", "source_2", "destination_2", "gruppo_1",
                                                                    {"k1_2": "key1_2", "k2": "key2_2"},
                                                                    {"p1_2": "param1_2", "p2_2": "param2_2"})],
-                                                    5, bucket="gs://fake-bucket")
+                                                    5, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
 
         self.assertEqual(2, len(todo_list))
 
@@ -135,7 +137,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                                       {"k1_4": "key1_4", "k2": "key2_4"},
                                                                       {"p1_4": "param1_4", "p2_4": "param2_4"})
                                                          ],
-                                                        3, bucket="gs://fake-bucket")
+                                                        3, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
 
         self.assertEqual('step-uid1', ",".join(todo_list[1].get('prerequisite_step_ids')))
 
@@ -157,7 +159,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                                       {"k1_4": "key1_4", "k2": "key2_4"},
                                                                       {"p1_4": "param1_4", "p2_4": "param2_4"})
                                                          ],
-                                                        3, bucket="gs://fake-bucket")
+                                                        3, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
         self.assertEqual('step-uid2', ",".join(todo_list[2].get('prerequisite_step_ids')))
 
     def test_number_of_tasks_create_to_do_list_of_two_workflows_with_two_heavy(self):
@@ -177,7 +179,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                                       {"k1_4": "key1_4", "k2": "key2_4"},
                                                                       {"p1_4": "param1_4", "p2_4": "param2_4"})
                                                          ],
-                                                        3, bucket="gs://fake-bucket")
+                                                        3, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
 
         self.assertEqual('step-uid1', ",".join(todo_list[1].get('prerequisite_step_ids')))
 
@@ -201,7 +203,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                          TaskSemaforo("uid5", "logical_table_5","source_5", "destination_5", "gruppo_1",
                                                                       {"k1_5": "key1_5", "k2": "key2_5"},
                                                                       {"p1_5": "param1_5", "p2_5": "param2_5"})
-                                                         ],3, bucket="gs://fake-bucket")
+                                                         ],3, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
 
         self.assertEqual('step-uid2', ",".join(todo_list[3].get('prerequisite_step_ids')))
 
@@ -225,7 +227,7 @@ class ToTestDataprocService(unittest.TestCase):
                                                                       {"k1_5": "key1_5", "k2": "key2_5"},
                                                                       {"p1_5": "param1_5", "p2_4": "param2_5"})
                                                          ],
-                                                        2, bucket="gs://fake-bucket")
+                                                        2, bucket="gs://fake-bucket", layer=Layers.STAGE.value)
 
         self.assertEqual('step-uid1', ",".join(todo_list[1].get('prerequisite_step_ids')))
         self.assertEqual('step-uid3', ",".join(todo_list[2].get('prerequisite_step_ids')))
@@ -242,9 +244,9 @@ class ToTestDataprocService(unittest.TestCase):
                 repository=self.orchestrator_repo,
                 run_id=TEST_RUN_ID,
                 config_file=TEST_APPLICATION_CONF,
-                bucket_name= "bucket"
+                bucket_name= "bucket",layer=Layers.STAGE.value
             )
-        expected={'run_id': '20250115_1013', 'table': 'reagdg', 'abi': '3239', 'prov': 'an', 'periodo': '202511'}
+        expected={'run_id': '20250115_1013', 'table': 'reagdg', 'abi': '3239', 'prov': 'an', 'periodo': '202511','process_id': 'uid1', 'layer': 'stage'}
 
         self.assertEqual(task1_job.get("labels"), expected)
 
@@ -258,9 +260,9 @@ class ToTestDataprocService(unittest.TestCase):
                 repository=self.orchestrator_repo,
                 run_id=TEST_RUN_ID,
                 config_file=TEST_APPLICATION_CONF,
-                bucket_name= "bucket"
+                bucket_name= "bucket", layer=Layers.STAGE.value
             )
-        expected = {'run_id': '20250115_1013', 'table': 'reagdg'}
+        expected = {'run_id': '20250115_1013', 'process_id': 'uid1', 'table': 'reagdg', 'layer': 'stage'}
 
         self.assertEqual(task1_job.get("labels"), expected)
 

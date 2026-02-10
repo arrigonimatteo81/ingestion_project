@@ -3,6 +3,7 @@ from common.utils import get_logger, extract_db_type_from_jdbc_url
 #from db.database_oracle import OracleDB
 from db.database_postgres import PostgresDB
 from db.database_sqlserver import SqlServerDB
+from processor.domain import DbType
 
 #from db.database_sqlserver import SqlServerDB
 
@@ -16,13 +17,13 @@ class DatabaseFactory:
     def get_db(self):
         db_type = extract_db_type_from_jdbc_url(self.cfg["url"])
         try:
-            #if db_type.upper() == "ORACLE":
+            #if db_type.upper() == DbType.ORACLE.value:
             #    return OracleDB(cfg)
-            if db_type.upper() == "POSTGRESQL":
+            if db_type.upper() == DbType.POSTGRESQL.value:
                 return PostgresDB(self.cfg)
-            #elif db_type.upper() == "MYSQL":
+            #elif db_type.upper() == DbType.MYSQL.value:
             #    return MySqlDB(cfg)
-            elif db_type.upper() == "SQLSERVER":
+            elif db_type.upper() == DbType.SQLSERVER.value:
                 return SqlServerDB(self.cfg)
             else:
                 logger.error("Unsupported db type!!!")

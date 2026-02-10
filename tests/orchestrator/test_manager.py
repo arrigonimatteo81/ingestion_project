@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from common.result import OperationResult
 from metadata.models.tab_tasks import TaskSemaforo
 from orchestrator.manager import IngestionOrchestratorManager
+from processor.domain import Layers
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 CONF_PATH = f"{test_dir}/resources/application.conf"
@@ -24,7 +25,8 @@ class TestOrchestratorManager(unittest.TestCase):
             run_id="r1",
             config_file=CONF_PATH,
             groups=["g1"],
-            repository=self.mock_repo
+            repository=self.mock_repo,
+            layer=Layers.STAGE.value
         )
 
 
