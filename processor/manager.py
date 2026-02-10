@@ -86,7 +86,7 @@ class BaseProcessorManager (ABC):
             query_params=self._task.query_params,
             run_id=self._run_id
         )
-
+        tr: TaskRuntime = None
         try:
             self._log_repository.insert_task_log_running(ctx, self._layer)
 
@@ -100,6 +100,7 @@ class BaseProcessorManager (ABC):
 
             # post actions comuni
             for action in tr.post_actions:
+
                 action.execute(execution_result, ctx)
 
             # semaforo
@@ -116,7 +117,8 @@ class BaseProcessorManager (ABC):
             return OperationResult(True, "")
 
         except Exception as exc:
-            if tr.task_is_blocking:
+            is_blocking = tr.is_blocking if tr else True
+            if is_blocking:
                 self._log_repository.insert_task_log_failed(ctx, str(exc), self._layer)
             else:
                 self._log_repository.insert_task_log_warning(ctx, str(exc), self._layer)
@@ -174,7 +176,7 @@ class NativeProcessorManager (BaseProcessorManager):
         return spark
 
     def _execute_task(self, ctx, source, destination):
-        s = self._get_spark_session
+        s = self._get_spark_session()
         res_read = source.fetch_all(ctx)
         destination.write_rows(res_read)
         max_data = max(row['num_data_va'] for row in res_read) if res_read else None
