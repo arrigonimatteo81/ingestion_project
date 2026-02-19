@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from pyspark.sql import functions as F
 
 from common.result import ExecutionResult
 from helpers.query_resolver import TaskContext
@@ -24,7 +24,13 @@ class IdAndDateUpdateStrategy(RegistroUpdateStrategy):
 
     def update(self, er: ExecutionResult, ctx: TaskContext, repo: RegistroRepository):
 
-        max_data = er.get("max_data_va")
+        max_data = None
+
+        if ctx.df:
+            max_data = ctx.df.agg(F.max("num_data_va").alias("max_data")).collect()[0]["max_data"]
+
+        if ctx.data:
+            max_data = max(row['num_data_va'] for row in ctx.data)
 
         repo.upsert(
             chiave=ctx.key,

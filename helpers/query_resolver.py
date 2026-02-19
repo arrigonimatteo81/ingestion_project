@@ -13,7 +13,7 @@ class TaskContext:
     query_params: dict
     run_id: str
     df: Optional[DataFrame] = None
-    #data: Optional[List] = None
+    data: Optional[List[dict]] = None
     #registro_repo: RegistroMetadata
 
 class QueryResolver:

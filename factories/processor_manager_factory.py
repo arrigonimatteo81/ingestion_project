@@ -6,7 +6,7 @@ from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader
 from metadata.models.tab_tasks import TaskSemaforo
 from processor.domain import ProcessorType
 from processor.manager import SparkProcessorManager, BaseProcessorManager, NativeProcessorManager, \
-    BigQueryProcessorManager
+    BigQueryProcessorManager, CustomProcessorManager
 
 logger = get_logger(__name__)
 
@@ -38,6 +38,14 @@ class ProcessorManagerFactory:
                 )
             elif processor_type == ProcessorType.BIGQUERY:
                return BigQueryProcessorManager(
+                run_id=run_id,
+                task=task,
+                config_file=config_file,
+                opt_secret_retriever=opt_secret_retriever,
+                layer=layer
+                )
+            elif processor_type == ProcessorType.CUSTOM:
+               return CustomProcessorManager(
                 run_id=run_id,
                 task=task,
                 config_file=config_file,

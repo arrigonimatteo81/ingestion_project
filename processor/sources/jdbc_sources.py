@@ -64,21 +64,22 @@ class QueryJDBCSource(JDBCQuery, DatabaseAware, SparkReadable, NativeReadable):
         query_text = QueryResolver.resolve(self.query, ctx)
 
         if self.partitioning_expression and self.num_partitions:
-            pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(self.create_database())
-            partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(self.partitioning_expression,
-                                                                                                       self.num_partitions,
-                                                                                                       query_text)
+            # Commentato perché, per come è adesso il partizionamento, il min e il max corrispondono a 1 e self.num_partition. È quindi inutile calcolarne il min e il max
+            #pc_factory: PartitioningConfigurationFactory = PartitioningConfigurationFactory(self.create_database())
+            #partitioning_cfg: PartitioningConfiguration = pc_factory.create_partitioning_configuration(self.partitioning_expression,
+            #                                                                                            self.num_partitions,
+            #                                                                                           query_text)
             logger.debug(
-                f"Lower bound: {partitioning_cfg.min_value}, "
-                f"upper bound: {partitioning_cfg.max_value}"
+                f"Lower bound: 1, "
+                f"upper bound: {self.num_partitions}"
             )
             df_reader: DataFrame = spark.read.jdbc(
                 url=self.url,
                 table=f"(select *, {self.partitioning_expression} as {NAME_OF_PARTITIONING_COLUMN} from ({query_text}) tab ) as subquery",
                 properties={"user": self.username,"password": self.password,"driver": self.driver},
-                lowerBound=str(partitioning_cfg.min_value),
-                upperBound=str(partitioning_cfg.max_value),
-                numPartitions=partitioning_cfg.num_partitions,
+                lowerBound="1",#str(partitioning_cfg.min_value),
+                upperBound=str(self.num_partitions),
+                numPartitions=self.num_partitions,
                 column=NAME_OF_PARTITIONING_COLUMN,
             )
 

@@ -75,7 +75,7 @@ class TableBigQueryDestination(SparkWritable,BigQueryWritable, BigQuery, Destina
 
         batch = []
         for row in rows:
-            batch.append(dict(zip(self.columns, row)))
+            batch.append(row)
 
         table = self.client_bigquery.get_table(table_id)
         self.client_bigquery.insert_rows(table, batch)

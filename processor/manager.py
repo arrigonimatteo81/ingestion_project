@@ -3,7 +3,7 @@ from typing import Optional
 
 from google.cloud import bigquery
 from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
+
 
 from common.const import NAME_OF_PARTITIONING_COLUMN
 from common.result import OperationResult
@@ -11,15 +11,14 @@ from common.secrets import SecretRetriever
 from common.task_runtime import TaskRuntime
 from common.utils import extract_field_from_file, get_logger
 from factories.destination_factory import DestinationFactory
+from factories.gold_worflow_factory import GoldWorkflowFactory
 from factories.registro_update_strategy_factory import RegistroUpdateStrategyFactory
 from factories.source_factory import SourceFactory
 from helpers.query_resolver import TaskContext
 from metadata.loader.metadata_loader import ProcessorMetadata, MetadataLoader, TaskLogRepository, \
     RegistroRepository, SemaforoMetadata
 from metadata.models.tab_tasks import TaskSemaforo
-from processor.destinations.base import Destination
-from processor.domain import Metric
-from processor.update_strategy.post_task_action import UpdateRegistroAction, SparkMetricsAction
+from processor.update_strategy.post_task_action import UpdateRegistroAction, PostTaskAction
 from processor.update_strategy.registro_update_strategy import ExecutionResult
 
 logger = get_logger(__name__)
@@ -65,7 +64,7 @@ class BaseProcessorManager (ABC):
 
         strategy = RegistroUpdateStrategyFactory().create(self._task.tipo_caricamento)
 
-        post_actions = [
+        post_actions: [PostTaskAction] = [
             UpdateRegistroAction(strategy,self._registro_repository),
             #SparkMetricsAction(self._log_repository)
         ]
@@ -80,15 +79,10 @@ class BaseProcessorManager (ABC):
 
 
     def start(self) -> OperationResult:
-        ctx = TaskContext(
-            self._task,
-            key=self._task.key,
-            query_params=self._task.query_params,
-            run_id=self._run_id
-        )
+        ctx = self._build_context()
         tr: TaskRuntime = None
         try:
-            self._log_repository.insert_task_log_running(ctx, self._layer)
+            self._insert_task_log_running(ctx)
 
             tr: TaskRuntime = self._build_runtime()
 
@@ -98,21 +92,13 @@ class BaseProcessorManager (ABC):
                 tr.destination
             )
 
-            # post actions comuni
-            for action in tr.post_actions:
-
-                action.execute(execution_result, ctx)
+            self._post_actions(self,ctx, execution_result, tr )
 
             # semaforo
-            if tr.has_next_step and execution_result.get("row_count", 0) > 0:
-                self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
+            self._semaforo(ctx, execution_result, tr)
 
             # log finale
-            self._log_repository.insert_task_log_successful(
-                ctx,
-                execution_result.get("row_count", 0),
-                self._layer
-            )
+            self._insert_task_log_succesfull(ctx, execution_result)
 
             return OperationResult(True, "")
 
@@ -125,6 +111,39 @@ class BaseProcessorManager (ABC):
 
             logger.error(exc, exc_info=True)
             return OperationResult(False, str(exc))
+
+    def _semaforo(self, ctx, execution_result, tr):
+        if tr.has_next_step and self._should_trigger_next_step(self, execution_result):
+            self._semaforo_repository.insert_task_semaforo(ctx, layer=self._layer)
+
+    @staticmethod
+    def _should_trigger_next_step(self,execution_result):
+        return execution_result.get("row_count", 0) > 0
+
+    @staticmethod
+    def _post_actions(self, ctx, execution_result, tr):
+        # post actions comuni
+        for action in tr.post_actions:
+            action.execute(execution_result, ctx)
+
+    def _insert_task_log_succesfull(self, ctx, execution_result):
+        self._log_repository.insert_task_log_successful(
+            ctx,
+            execution_result.get("row_count", 0),
+            self._layer
+        )
+
+    def _insert_task_log_running(self, ctx):
+        self._log_repository.insert_task_log_running(ctx, self._layer)
+
+    def _build_context(self):
+        ctx = TaskContext(
+            self._task,
+            key=self._task.key,
+            query_params=self._task.query_params,
+            run_id=self._run_id
+        )
+        return ctx
 
     @abstractmethod
     def _execute_task(self, ctx, source, destination) -> ExecutionResult:
@@ -149,13 +168,9 @@ class SparkProcessorManager (BaseProcessorManager):
         df = source.to_dataframe(session, ctx)
         df = df.drop(NAME_OF_PARTITIONING_COLUMN)
         destination.write(df)
-        max_data = df.agg(
-            F.max("num_data_va").alias("max_data")
-        ).collect()[0]["max_data"]
-
+        ctx.df=df
         rowcount = df.count()
         return ExecutionResult({
-            "max_data_va": max_data,
             "row_count": rowcount
         })
 
@@ -179,10 +194,9 @@ class NativeProcessorManager (BaseProcessorManager):
         s = self._get_spark_session()
         res_read = source.fetch_all(ctx)
         destination.write_rows(res_read)
-        max_data = max(row['num_data_va'] for row in res_read) if res_read else None
+        ctx.data=res_read
         rowcount = len(res_read)
         return ExecutionResult({
-            "max_data_va": max_data,
             "row_count": rowcount
         })
 
@@ -193,3 +207,15 @@ class BigQueryProcessorManager (BaseProcessorManager):
         return ExecutionResult({
             "row_count": row_number
         })
+
+
+class CustomProcessorManager (SparkProcessorManager):
+
+    def _execute_task(self, ctx, source, destination):
+        spark = self._get_spark_session()
+        bq_client = bigquery.Client()
+
+        workflow = GoldWorkflowFactory.create(
+            self._task.logical_table
+        )
+        return workflow.run(ctx, spark,bq_client)
